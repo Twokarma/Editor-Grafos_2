@@ -4,6 +4,8 @@ import 'package:graph_maker_app_2/rules/graph_rules.dart';
 import 'package:graph_maker_app_2/rules/johnson_rules.dart';
 import 'package:graph_maker_app_2/rules/transport_rules.dart';
 import 'package:graph_maker_app_2/screens/transportation_screen.dart';
+import 'package:graph_maker_app_2/rules/kruskal_rules.dart';
+import 'package:graph_maker_app_2/screens/kruskal_screen.dart';
 
 import '../providers/graph_provider.dart';
 import '../screens/assignment_screen.dart';
@@ -19,6 +21,7 @@ enum AppMode{
   assignment('Asignación', 'As', ModeGroup.algorithm, Icons.compare_arrows, 'Asigna tareas a recursos buscando el menor costo total'),
   johnson('Johnson', 'Jo', ModeGroup.algorithm, Icons.route, 'Calcula caminos mínimos entre todos los pares de vértices'),
   transporte('Transporte', 'Tr', ModeGroup.algorithm, Icons.local_shipping_outlined, 'Reparte unidades desde orígenes hasta destinos al menor costo: esquina noroeste y optimización MODI'),
+  kruskal('Kruskal', 'Kr', ModeGroup.algorithm, Icons.account_tree_outlined, 'Encuentra el árbol de expansión de peso mínimo (o máximo) uniendo las aristas sin formar ciclos'),
   selection('Selection', 'Se', ModeGroup.sort, Icons.sort, 'Ordena una lista seleccionando en cada paso el menor elemento restante'),
   insertion('Insertion', 'In', ModeGroup.sort, Icons.more_horiz, 'Ordena insertando cada elemento en su posición dentro de la parte ya ordenada'),
   merge('Merge', 'Me', ModeGroup.sort, Icons.call_merge, 'Ordena comparando elementos separados por un salto que se va reduciendo'),
@@ -32,11 +35,12 @@ enum AppMode{
   final IconData icon;
   final String description;
 
-  bool get usesCopy => this == assignment || this == johnson || this == transporte;
+  bool get usesCopy => this == assignment || this == johnson || this == transporte || this == kruskal;
   GraphRules get rules => switch(this){
     AppMode.assignment => AssignmentRules(),
     AppMode.johnson => JohnsonRules(),
     AppMode.transporte => TransportRules(),
+    AppMode.kruskal => KruskalRules(),
     AppMode.graphMaker ||
     AppMode.selection ||
     AppMode.insertion ||
@@ -49,6 +53,7 @@ enum AppMode{
     AppMode.assignment => AssignmentScreen(mainProvider: main),
     AppMode.johnson => JohnsonScreen(mainProvider: main),
     AppMode.transporte => TransportationScreen(mainProvider: main),
+    AppMode.kruskal => KruskalScreen(mainProvider: main),
     AppMode.selection => const SelectionSort(),
     AppMode.insertion => const InsertionSort(),
     AppMode.merge => const MergeSort(),
