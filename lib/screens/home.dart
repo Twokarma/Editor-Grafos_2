@@ -12,6 +12,8 @@ import 'package:graph_maker_app_2/screens/insertion_sort.dart';
 import 'package:graph_maker_app_2/screens/johnson_screen.dart';
 import 'package:graph_maker_app_2/screens/merge_sort.dart';
 import 'package:graph_maker_app_2/screens/selection_sort.dart';
+import 'package:graph_maker_app_2/rules/kruskal_rules.dart';
+import 'package:graph_maker_app_2/screens/kruskal_screen.dart';
 import 'package:graph_maker_app_2/rules/transport_rules.dart';
 import 'package:graph_maker_app_2/screens/transportation_screen.dart';
 import 'package:graph_maker_app_2/screens/shell_sort.dart';
@@ -112,6 +114,12 @@ final _methods = <_Method>[
      Icons.local_shipping_outlined,
      (ctx) => _pushWithCopy(ctx, TransportRules(), (main) => TransportationScreen(mainProvider: main)),
    ),
+   _Method(
+     'Kruskal Algorithm',
+     'Encuentra el árbol de expansión de peso mínimo (o máximo) uniendo las aristas sin formar ciclos.',
+     Icons.account_tree_outlined,
+     (ctx) => _pushWithCopy(ctx, KruskalRules(), (main) => KruskalScreen(mainProvider: main)),
+   ),   
   _Method(
     'Selection Sort',
     'Ordena una lista seleccionando en cada paso el menor elemento restante.',
