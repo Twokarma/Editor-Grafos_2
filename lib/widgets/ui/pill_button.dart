@@ -3,12 +3,12 @@ import 'package:graph_maker_app_2/widgets/ui/pressable.dart';
 
 import '../../theme/app_colors.dart';
 
-enum PillButtonStyle{
+enum AppButtonStyle{
   outline(AppColors.white, AppColors.darkBlue, 1.5, AppColors.darkBlue),
   accent(AppColors.blue, null, null, AppColors.white),
   dark(AppColors.darkBlue, null, null, AppColors.white);
 
-  const PillButtonStyle(this.background, this.strokeColor, this.strokeWidth, this.textColor);
+  const AppButtonStyle(this.background, this.strokeColor, this.strokeWidth, this.textColor);
 
   final Color background;
   final Color? strokeColor;
@@ -20,7 +20,7 @@ class PillButton extends StatelessWidget{
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
-  final PillButtonStyle style;
+  final AppButtonStyle style;
   final bool fullWidth;
 
   const PillButton({super.key, required this.label, this.onTap, this.icon, required this.style, this.fullWidth = false});

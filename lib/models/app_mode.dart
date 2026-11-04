@@ -55,4 +55,8 @@ enum AppMode{
     AppMode.shell => const ShellSort(),
   };
 }
-enum ModeGroup{top, algorithm, sort}
+enum ModeGroup{
+  top(''), algorithm('Algoritmos'), sort('Sorts');
+  const ModeGroup(this.label);
+  final String label;
+}

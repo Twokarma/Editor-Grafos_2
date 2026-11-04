@@ -15,6 +15,7 @@ import '../widgets/graph_canvas.dart';
 import '../widgets/menu_option.dart';
 import '../services/transportation_overlay_builder.dart';
 import '../widgets/overlays/assignment_canvas_overlay.dart';
+import 'pdf_viewer_screen.dart'; // ★ MANUAL: openManual()
 import 'transportation_steps_screen.dart';
 
 /// Problema de transporte sobre el grafo.
@@ -242,6 +243,14 @@ class _TransportationScreenState extends State<TransportationScreen> {
         case MenuOption.clear:
           graphProviderCopy.clearGraph();
           break;
+        // ★ MANUAL: abre la guía de Transporte
+        case MenuOption.manual:
+          openManual(
+            context,
+            title: 'Transporte',
+            assetPath: 'assets/docs/guia_transporte.pdf',
+          );
+          break;
         default:
           break;
       }
@@ -306,6 +315,14 @@ class _TransportationScreenState extends State<TransportationScreen> {
                   child: ListTile(
                     leading: Icon(Icons.delete_sweep_outlined),
                     title: Text('Clear'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem<MenuOption>(
+                  value: MenuOption.manual,
+                  child: ListTile(
+                    leading: Icon(Icons.menu_book_outlined),
+                    title: Text('Manual'),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),

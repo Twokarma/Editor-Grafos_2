@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/layout/breakpoints.dart';
+import 'package:graph_maker_app_2/layout/editor_card.dart';
 import 'package:graph_maker_app_2/layout/editor_shell.dart';
+import 'package:graph_maker_app_2/models/app_mode.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
+import 'package:graph_maker_app_2/navigation/go_to_mode.dart';
+import 'package:graph_maker_app_2/widgets/nav/side_nav.dart';
 import 'package:graph_maker_app_2/widgets/ui/panel_card.dart';
 
 class WebEditorLayout extends StatefulWidget{
@@ -16,21 +20,16 @@ class WebEditorLayout extends StatefulWidget{
 }
 
 class _WebEditorLayoutState extends State<WebEditorLayout>{
-  late bool _menuCollapsed;
+  bool? _userCollapsed;
   bool _chatOpen = false;
 
-  bool get toggle => !_menuCollapsed;
+  bool get effectiveValue => _userCollapsed?? widget.menuCollapsed;
 
-  @override
-  void initState(){
-    super.initState();
-    setState(() {
-      _menuCollapsed = widget.menuCollapsed;
-    });
-  }
+  void toggle() => setState(() => _userCollapsed = !effectiveValue);
 
   @override
   Widget build(BuildContext context){
+    AppMode editorMode = widget.editorShell.mode;
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: Stack(
@@ -39,13 +38,20 @@ class _WebEditorLayoutState extends State<WebEditorLayout>{
           padding: const EdgeInsetsGeometry.all(Breakpoints.margin),
           child: Row(
             children: [
-              SizedBox(
-                width: _menuCollapsed? Breakpoints.collapsedMenu : Breakpoints.openedMenu,
-                child: Column(),
+              SideNav(
+                  activeMode: editorMode,
+                  collapsed: effectiveValue,
+                  onToggleCollapsed: toggle,
+                  onSelection: (mode) => goToMode(context, mode, editorMode),
+                  onBack: () => Navigator.maybePop(context),
               ),
               const SizedBox(width: Breakpoints.margin,),
               Expanded(
-                child: widget.editorShell.canvas,
+                child: EditorCard(
+                    title: widget.editorShell.title?? "Editor · ${editorMode.label}",
+                    hint: widget.editorShell.hint?? editorMode.description,
+                    child: widget.editorShell.canvas
+                ),
               ),
               const SizedBox(width: Breakpoints.margin,),
               SizedBox(
@@ -54,10 +60,10 @@ class _WebEditorLayoutState extends State<WebEditorLayout>{
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child: PanelCard(title: "Funciones", child: widget.editorShell.functions,),
+                      child: widget.editorShell.functions,
                     ),
                     const SizedBox(height: Breakpoints.margin,),
-                    PanelCard(title: "Opciones", child: Text("data"))
+                    widget.editorShell.options,
                   ],
                 ),
               ),

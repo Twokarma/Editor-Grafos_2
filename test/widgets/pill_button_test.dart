@@ -34,55 +34,55 @@ Finder get iconGap => _inButton(find.byWidgetPredicate((w) => w is SizedBox && w
 void main() {
   group('contenido', () {
     testWidgets('muestra el texto', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'Guardar', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'Guardar', style: AppButtonStyle.outline, onTap: () {})));
       expect(find.text('Guardar'), findsOneWidget);
     });
 
     testWidgets('sin ícono: no hay ícono ni hueco de 8 px', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'Guardar', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'Guardar', style: AppButtonStyle.outline, onTap: () {})));
       expect(_inButton(find.byType(Icon)), findsNothing);
       expect(iconGap, findsNothing, reason: 'el hueco solo debe existir si hay ícono');
     });
 
     testWidgets('con ícono: ícono y hueco, del color del texto', (t) async {
       await t.pumpWidget(wrap(PillButton(
-          label: 'Deshacer', icon: Icons.undo, style: PillButtonStyle.outline, onTap: () {})));
+          label: 'Deshacer', icon: Icons.undo, style: AppButtonStyle.outline, onTap: () {})));
       expect(find.byIcon(Icons.undo), findsOneWidget);
       expect(iconGap, findsOneWidget);
-      expect(t.widget<Icon>(find.byIcon(Icons.undo)).color, PillButtonStyle.outline.textColor);
+      expect(t.widget<Icon>(find.byIcon(Icons.undo)).color, AppButtonStyle.outline.textColor);
     });
   });
 
   group('toque', () {
     testWidgets('tocar llama a onTap', (t) async {
       var taps = 0;
-      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: PillButtonStyle.outline, onTap: () => taps++)));
+      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: AppButtonStyle.outline, onTap: () => taps++)));
       await t.tap(find.byType(PillButton));
       expect(taps, 1);
     });
 
     testWidgets('tocar el relleno (no el texto) también cuenta', (t) async {
       var taps = 0;
-      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: PillButtonStyle.outline, onTap: () => taps++)));
+      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: AppButtonStyle.outline, onTap: () => taps++)));
       final rect = t.getRect(find.byType(PillButton));
       await t.tapAt(Offset(rect.left + 6, rect.center.dy)); // dentro del padding izquierdo
       expect(taps, 1);
     });
 
     testWidgets('deshabilitado: no hace nada y se ve apagado', (t) async {
-      await t.pumpWidget(wrap(const PillButton(label: 'Abrir', style: PillButtonStyle.outline)));
+      await t.pumpWidget(wrap(const PillButton(label: 'Abrir', style: AppButtonStyle.outline)));
       await t.tap(find.byType(PillButton)); // no debe lanzar
       expect(opacityOf(t), lessThan(1.0));
     });
 
     testWidgets('habilitado: opacidad completa', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: AppButtonStyle.outline, onTap: () {})));
       expect(opacityOf(t), 1.0);
     });
   });
 
   group('estilos', () {
-    for (final style in PillButtonStyle.values) {
+    for (final style in AppButtonStyle.values) {
       testWidgets('${style.name}: fondo y color de texto', (t) async {
         await t.pumpWidget(wrap(PillButton(label: 'X', style: style, onTap: () {})));
         expect(decorationOf(t).color, style.background);
@@ -91,13 +91,13 @@ void main() {
     }
 
     testWidgets('outline: borde del color y grosor del estilo', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'X', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'X', style: AppButtonStyle.outline, onTap: () {})));
       final side = sideOf(t);
-      expect(side.width, PillButtonStyle.outline.strokeWidth);
-      expect(side.color, PillButtonStyle.outline.strokeColor);
+      expect(side.width, AppButtonStyle.outline.strokeWidth);
+      expect(side.color, AppButtonStyle.outline.strokeColor);
     });
 
-    for (final style in [PillButtonStyle.accent, PillButtonStyle.dark]) {
+    for (final style in [AppButtonStyle.accent, AppButtonStyle.dark]) {
       testWidgets('${style.name}: sin borde (ni siquiera una línea fina)', (t) async {
         await t.pumpWidget(wrap(PillButton(label: 'X', style: style, onTap: () {})));
         expect(sideOf(t).style, BorderStyle.none);
@@ -105,33 +105,33 @@ void main() {
     }
 
     testWidgets('forma de píldora (extremos redondos)', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'X', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'X', style: AppButtonStyle.outline, onTap: () {})));
       expect(decorationOf(t).shape, isA<StadiumBorder>());
     });
   });
 
   group('tamaño y distribución', () {
     testWidgets('alto mínimo de 48 px', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'X', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'X', style: AppButtonStyle.outline, onTap: () {})));
       expect(t.getSize(find.byType(PillButton)).height, greaterThanOrEqualTo(48));
     });
 
     testWidgets('normal: se ajusta al texto', (t) async {
-      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: PillButtonStyle.outline, onTap: () {})));
+      await t.pumpWidget(wrap(PillButton(label: 'Abrir', style: AppButtonStyle.outline, onTap: () {})));
       expect(t.takeException(), isNull);
       expect(t.getSize(find.byType(PillButton)).width, lessThan(400));
     });
 
     testWidgets('fullWidth: ocupa todo el ancho', (t) async {
       await t.pumpWidget(wrap(PillButton(
-          label: 'Abrir', style: PillButtonStyle.outline, fullWidth: true, onTap: () {})));
+          label: 'Abrir', style: AppButtonStyle.outline, fullWidth: true, onTap: () {})));
       expect(t.takeException(), isNull);
       expect(t.getSize(find.byType(PillButton)).width, 400);
     });
 
     testWidgets('fullWidth: el texto queda centrado', (t) async {
       await t.pumpWidget(wrap(PillButton(
-          label: 'Abrir', style: PillButtonStyle.outline, fullWidth: true, onTap: () {})));
+          label: 'Abrir', style: AppButtonStyle.outline, fullWidth: true, onTap: () {})));
       final button = t.getCenter(find.byType(PillButton)).dx;
       final text = t.getCenter(find.text('Abrir')).dx;
       expect(text, closeTo(button, 1));
@@ -139,8 +139,8 @@ void main() {
 
     testWidgets('dos botones lado a lado en un Row no dan error', (t) async {
       await t.pumpWidget(wrap(Row(mainAxisSize: MainAxisSize.min, children: [
-        PillButton(label: 'Deshacer', icon: Icons.undo, style: PillButtonStyle.outline, onTap: () {}),
-        PillButton(label: 'Rehacer', icon: Icons.redo, style: PillButtonStyle.outline, onTap: () {}),
+        PillButton(label: 'Deshacer', icon: Icons.undo, style: AppButtonStyle.outline, onTap: () {}),
+        PillButton(label: 'Rehacer', icon: Icons.redo, style: AppButtonStyle.outline, onTap: () {}),
       ])));
       expect(t.takeException(), isNull);
       expect(find.byType(PillButton), findsNWidgets(2));
@@ -150,7 +150,7 @@ void main() {
       await t.pumpWidget(wrap(
         PillButton(
             label: 'Aplicar todos los cambios al grafo principal ahora mismo',
-            style: PillButtonStyle.outline,
+            style: AppButtonStyle.outline,
             fullWidth: true,
             onTap: () {}),
         width: 200,

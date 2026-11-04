@@ -44,4 +44,8 @@ class AppColors {
   static const Color orange = Color.fromARGB(255, 251, 133, 0);
   static const Color white = Color.fromARGB(255, 255, 255, 255);
   static const Color paper = Color.fromARGB(255, 230, 231, 233);
+  static const Color gray = Color.fromARGB(255, 120, 120, 120);
+
+  static const Color navHover = Color.fromARGB(31, 33, 158, 188);
+  static const Color navActive = Color.fromARGB(46, 33, 158, 188);
 }

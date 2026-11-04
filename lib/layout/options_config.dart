@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/widgets/ui/pill_button.dart';
 
 enum OptionKind{
-  undo('Deshacer', Icons.undo, PillButtonStyle.outline, OptionGroup.history),
-  redo('Rehacer', Icons.redo, PillButtonStyle.outline, OptionGroup.history),
-  save('Guardar', Icons.save_outlined, PillButtonStyle.outline, OptionGroup.graph),
-  open('Abrir', Icons.folder_open_outlined, PillButtonStyle.outline, OptionGroup.graph),
-  clear('Limpiar', Icons.delete_sweep_outlined, PillButtonStyle.outline, OptionGroup.graph),
-  apply('Aplicar', Icons.publish, PillButtonStyle.outline, OptionGroup.graph),
-  manual('Manual', Icons.menu_book_outlined, PillButtonStyle.outline, OptionGroup.graph),
-  help('Ayuda', Icons.help_outline, PillButtonStyle.outline, OptionGroup.graph),
-  aiChat('ChatIA', Icons.chat_bubble_outline, PillButtonStyle.dark, OptionGroup.graph);
+  undo('Deshacer', Icons.undo, AppButtonStyle.outline, OptionGroup.history),
+  redo('Rehacer', Icons.redo, AppButtonStyle.outline, OptionGroup.history),
+  save('Guardar', Icons.save_outlined, AppButtonStyle.outline, OptionGroup.graph),
+  open('Abrir', Icons.folder_open_outlined, AppButtonStyle.outline, OptionGroup.graph),
+  clear('Limpiar', Icons.delete_sweep_outlined, AppButtonStyle.outline, OptionGroup.graph),
+  apply('Aplicar', Icons.publish, AppButtonStyle.outline, OptionGroup.graph),
+  manual('Manual', Icons.menu_book_outlined, AppButtonStyle.outline, OptionGroup.graph),
+  help('Ayuda', Icons.help_outline, AppButtonStyle.outline, OptionGroup.graph),
+  aiChat('ChatIA', Icons.chat_bubble_outline, AppButtonStyle.dark, OptionGroup.graph);
 
   const OptionKind(this.label, this.icon, this.style, this.group);
 
   final String label;
   final IconData icon;
-  final PillButtonStyle style;
+  final AppButtonStyle style;
   final OptionGroup group;
 }
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/algorithms/johnson1.dart';
+import 'package:graph_maker_app_2/layout/editor_shell.dart';
+import 'package:graph_maker_app_2/layout/options_config.dart';
+import 'package:graph_maker_app_2/models/app_mode.dart';
 import 'package:graph_maker_app_2/models/edge.dart';
 import 'package:graph_maker_app_2/providers/graph_provider.dart';
 import 'package:graph_maker_app_2/screens/johnson_matrix_screen.dart';
@@ -7,6 +10,8 @@ import 'package:graph_maker_app_2/services/johnson_service.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
 import 'package:graph_maker_app_2/widgets/dialogs/confirm_exit_dialog.dart';
 import 'package:graph_maker_app_2/widgets/overlays/johnson_overlay.dart';
+import 'package:graph_maker_app_2/widgets/panels/johnson_functions.dart';
+import 'package:graph_maker_app_2/widgets/panels/options_panel.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
@@ -14,7 +19,6 @@ import '../models/node.dart';
 import '../widgets/dialogs/open_graph_dialog.dart';
 import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
-import '../widgets/menu_option.dart';
 import 'chat_screen.dart';
 
 // ★ AYUDA: imports nuevos
@@ -48,7 +52,7 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
   // ★ AYUDA: keys de cada botón que explica el tour
   final _publishKey = GlobalKey();
   final _undoKey = GlobalKey();
-  final _menuKey = GlobalKey();
+  final _manualKey = GlobalKey();
   final _helpKey = GlobalKey();
   final _matrixKey = GlobalKey();
   final _fromKey = GlobalKey();
@@ -57,25 +61,30 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
   // ★ AYUDA: pasos del tour
   void _startTour() {
-    GraphTour.show(context, [
-      TourStep(_publishKey, 'Aplicar al grafo principal',
-          'Envía los cambios de esta copia al grafo principal. Se activa solo cuando hay cambios.'),
-      TourStep(_undoKey, 'Deshacer',
-          'Revierte la última acción en esta copia del grafo.'),
-      TourStep(_menuKey, 'Más opciones',
-          'Guardar, abrir, limpiar el grafo o abrir el chat con el asistente.'),
-      TourStep(_matrixKey, 'Matriz M[x]',
-          'Muestra las matrices de distancias calculadas por Johnson.',
-          align: ContentAlign.left),
-      TourStep(_fromKey, 'Origen (From)',
-          'Vértice desde el que se calcula el camino.',
-          align: ContentAlign.top, shape: ShapeLightFocus.RRect),
-      TourStep(_toKey, 'Destino (To)', 'Vértice al que quieres llegar.',
-          align: ContentAlign.top, shape: ShapeLightFocus.RRect),
+    List<TourStep> tourSteps = [
+      TourStep(_fromKey, 'Desde (Origen)',
+        'Vértice desde el que se calcula el camino.',
+        align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+      TourStep(_toKey, 'Hacia (Destino)', 'Vértice al que quieres llegar.',
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
       TourStep(_objectiveKey, 'Maximizar / Minimizar',
           'Cambia entre el camino de mayor costo y el de menor costo.',
-          align: ContentAlign.top, shape: ShapeLightFocus.RRect),
-    ]);
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+      TourStep(_matrixKey, 'Matriz M[x]',
+          'Muestra las matrices de distancias calculadas por Johnson.',
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+      TourStep(_undoKey, 'Deshacer',
+          'Revierte la última acción en esta copia del grafo.',
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+      TourStep(_publishKey, 'Aplicar al grafo principal',
+          'Envía los cambios de esta copia al grafo principal. Se activa solo cuando hay cambios.',
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+      TourStep(_manualKey, 'Cómo usar Johnson',
+          'Muestra una guía para utilizar la app con Johnson.',
+          align: ContentAlign.left, shape: ShapeLightFocus.RRect)
+    ].where((s) => s.key.currentContext != null).toList();
+
+    if(tourSteps.isNotEmpty) GraphTour.show(context, tourSteps);
   }
 
   @override
@@ -238,51 +247,92 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
     return "$path = ${copy[copy.length - 1]}";
   }
 
+  void _apply(String currentGraph){
+    widget.mainProvider.replaceGraph(_copy.snapshot());
+    setState(() {
+      _lastAppliedJson = currentGraph;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Grafo actualizado'))
+    );
+  }
+
+  void _changeFrom(String? id){
+    setState(() {
+      _from = id;
+    });
+    _pathUpdate();
+  }
+
+  void _changeTo(String? id){
+    setState(() {
+      _to = id;
+    });
+    _pathUpdate();
+  }
+
+  void _changeObjective(Objective newObjective){
+    setState(() {
+      _objective = newObjective;
+    });
+    if(_hasChanges) _runJohnson();
+    _pathUpdate();
+  }
+
+  void _openMatrix(){
+    Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider.value(
+            value: _copy,
+            child: JohnsonMatrixScreen(
+                nodes: _service!.nodes,
+                result: _service!.result),
+          )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final graphProviderCopy = context.watch<GraphProvider>();
     final String currentGraph = jsonEncode(_copy.graphGetter().toJson());
     final bool hasChanges = _lastAppliedJson != currentGraph;
     final List<String> messages = _copy.validateGraph();
-    final bool canSolve =
-        _copy.graphGetter().edges.isNotEmpty && messages.isEmpty;
+    final bool canSolve = _copy.graphGetter().edges.isNotEmpty && messages.isEmpty;
+    final String? pathText = _pathEdgeIds.isNotEmpty? _buildTextPath() : null;
 
-    void handleMenuSelection(BuildContext context, MenuOption option) {
-      switch (option) {
-        case MenuOption.save:
-          showSaveDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.open:
-          showOpenDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.clear:
-          graphProviderCopy.clearGraph();
-          break;
-        case MenuOption.chat:
-          Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => ChangeNotifierProvider.value(
-                      value: _copy,
-                      child: const ChatScreen(),
-                    )),
-          );
-          break;
-        // ★ MANUAL: abre la guía de Johnson
-        case MenuOption.manual:
-          openManual(
-            context,
-            title: 'Johnson',
-            assetPath: 'assets/docs/guia_johnson.pdf',
-          );
-          break;
-      }
-    }
-
-    final List<DropdownMenuEntry<String>> dropdownMenuEntries = [
-      if (_service != null)
-        for (final Node node in _service!.nodes)
-          DropdownMenuEntry<String>(value: node.id, label: node.name),
-    ];
+    final OptionsConfig options = OptionsConfig(
+        onApply: () => _apply(currentGraph),
+        onUndo: graphProviderCopy.undo,
+        onHelp: _startTour,
+        onOpen: () => showOpenDialog(context, graphProviderCopy),
+        onSave: () => showSaveDialog(context, graphProviderCopy),
+        onClear: graphProviderCopy.clearGraph,
+        onManual: () => openManual(
+          context,
+          title: 'Johnson',
+          assetPath: 'assets/docs/guia_johnson.pdf',
+        ),
+      hasChanges: hasChanges,
+      canUndo: graphProviderCopy.canUndo,
+    );
+    final JohnsonFunctions functions = JohnsonFunctions(
+        path: pathText,
+        message: _message,
+        nodes: _service?.nodes ?? [],
+        from: _from,
+        to: _to,
+        objective: _objective,
+        canSolve: canSolve,
+        resultExists: _lastResult != null,
+        onFromChanged: _changeFrom,
+        onToChanged: _changeTo,
+        onObjectiveChanged: _changeObjective,
+        onOpenMatrix: _openMatrix,
+        fromKey: _fromKey,
+        toKey: _toKey,
+        objectiveKey: _objectiveKey,
+        matrixKey: _matrixKey,
+    );
 
     return PopScope(
         canPop: !hasChanges,
@@ -290,232 +340,28 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
           if (didPop) return;
           showConfirmExitDialog(context, _copy);
         }),
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text("Johnson"),
-            actions: [
-              IconButton(
-                key: _publishKey, // ★ AYUDA
-                icon: const Icon(Icons.publish),
-                tooltip: "Apply to main graph",
-                onPressed: hasChanges
-                    ? () {
-                        widget.mainProvider.replaceGraph(_copy.snapshot());
-                        setState(() {
-                          _lastAppliedJson = currentGraph;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Graph Updated')));
-                      }
-                    : null,
-              ),
-              IconButton(
-                key: _undoKey, // ★ AYUDA
-                icon: const Icon(Icons.undo),
-                tooltip: "Undo",
-                onPressed: graphProviderCopy.canUndo
-                    ? () => graphProviderCopy.undo()
-                    : null,
-              ),
-
-              // ★ AYUDA: botón que lanza el tour
-              IconButton(
-                key: _helpKey,
-                icon: const Icon(Icons.help_outline),
-                tooltip: "Help",
-                onPressed: _startTour,
-              ),
-
-              PopupMenuButton<MenuOption>(
-                key: _menuKey, // ★ AYUDA
-                onSelected: (option) => handleMenuSelection(context, option),
-                itemBuilder: (BuildContext context) =>
-                    <PopupMenuEntry<MenuOption>>[
-                  const PopupMenuItem<MenuOption>(
-                    value: MenuOption.save,
-                    child: ListTile(
-                      leading: Icon(Icons.save_outlined),
-                      title: Text('Save'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const PopupMenuItem<MenuOption>(
-                    value: MenuOption.open,
-                    child: ListTile(
-                      leading: Icon(Icons.folder_open_outlined),
-                      title: Text('Open'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const PopupMenuItem<MenuOption>(
-                    value: MenuOption.clear,
-                    child: ListTile(
-                      leading: Icon(Icons.delete_sweep_outlined),
-                      title: Text('Clear'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const PopupMenuItem<MenuOption>(
-                    value: MenuOption.chat,
-                    child: ListTile(
-                      leading: Icon(Icons.chat_bubble_outline),
-                      title: Text('ChatAI'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const PopupMenuItem<MenuOption>(
-                    value: MenuOption.manual,
-                    child: ListTile(
-                      leading: Icon(Icons.menu_book_outlined),
-                      title: Text('Manual'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          body: GraphWidget(
+        child: EditorShell(
+            mode: AppMode.johnson,
+            canvas: GraphWidget(
               canvasOverlay: JohnsonOverlay(
                   _pathEdgeIds,
                   _objective == Objective.max? AppColors.maxJohnson : AppColors.minJohnson,
                   _lastResult ?? JohnsonResult1(),
                   _lastResult != null? _service!.nodes : <Node>[]
               ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            key: _matrixKey, // ★ AYUDA
-            onPressed: _lastResult != null
-                ? () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => ChangeNotifierProvider.value(
-                                value: _copy,
-                                child: JohnsonMatrixScreen(
-                                    nodes: _service!.nodes,
-                                    result: _service!.result),
-                              )),
-                    );
-                  }
-                : null,
-            shape: const CircleBorder(),
-            child: const Text(
-              "M[x]",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11),
             ),
-          ),
-          bottomNavigationBar: SafeArea(
-              child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ★ Único lugar donde se muestra el camino o el mensaje
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    _pathEdgeIds.isNotEmpty
-                        ? _buildTextPath()
-                        : (_message ?? ''),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: _lastResult == null
-                              ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      // ★ GlobalKey en el Container (tour), ValueKey en el dropdown (refresco)
-                      child: Container(
-                        key: _fromKey,
-                        child: DropdownMenu<String>(
-                          key: ValueKey('from_$_from'),
-                          expandedInsets: EdgeInsets.zero,
-                          initialSelection: _from,
-                          label: const Text('From'),
-                          requestFocusOnTap: false,
-                          enabled: _lastResult != null,
-                          menuHeight: 300,
-                          dropdownMenuEntries: dropdownMenuEntries,
-                          onSelected: (String? selection) {
-                            setState(() {
-                              _from = selection;
-                            });
-                            _pathUpdate();
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Expanded(
-                      child: Container(
-                        key: _toKey,
-                        child: DropdownMenu<String>(
-                          key: ValueKey('to_$_to'),
-                          expandedInsets: EdgeInsets.zero,
-                          initialSelection: _to,
-                          label: const Text('To'),
-                          requestFocusOnTap: false,
-                          enabled: _lastResult != null,
-                          menuHeight: 300,
-                          dropdownMenuEntries: dropdownMenuEntries,
-                          onSelected: (String? selection) {
-                            setState(() {
-                              _to = selection;
-                            });
-                            _pathUpdate();
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 17),
-                Row(
-                  key: _objectiveKey, // ★ AYUDA
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: canSolve
-                            ? () {
-                                setState(() {
-                                  _objective = Objective.min;
-                                });
-                                if (_hasChanges) _runJohnson();
-                                _pathUpdate();
-                              }
-                            : null,
-                        icon: const Icon(Icons.trending_down),
-                        label: const Text('Minimize'),
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: canSolve
-                            ? () {
-                                setState(() {
-                                  _objective = Objective.max;
-                                });
-                                if (_hasChanges) _runJohnson();
-                                _pathUpdate();
-                              }
-                            : null,
-                        icon: const Icon(Icons.trending_up),
-                        label: const Text('Maximize'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            functions: functions,
+            summary: Text(_message?? pathText?? ''),
+            options: OptionsPanel(
+              optionsConfig: options,
+              keys: {
+                OptionKind.apply: _publishKey,
+                OptionKind.undo: _undoKey,
+                OptionKind.manual: _manualKey,
+              },
             ),
-          )),
-        ));
+            hint: "Elige origen, destino y objetivo en Funciones",
+        ),
+    );
   }
 }
