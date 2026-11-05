@@ -14,6 +14,7 @@ class DijkstraStepsScreen extends StatelessWidget {
 
   String _fmt(double v) {
     if (v == double.infinity) return '∞';
+    if (v == double.negativeInfinity) return '-∞';
     if (v == v.roundToDouble()) return v.toInt().toString();
     return v.toStringAsFixed(2);
   }
@@ -28,7 +29,7 @@ class DijkstraStepsScreen extends StatelessWidget {
           children: [
             Text(
               r.reachable
-                  ? 'Shortest distance: ${_fmt(r.totalDistance)}'
+                  ? '${r.maximize ? 'Longest' : 'Shortest'} distance: ${_fmt(r.totalDistance)}'
                   : 'No path found',
               style: Theme.of(context).textTheme.titleLarge,
             ),
@@ -117,15 +118,23 @@ class DijkstraStepsScreen extends StatelessWidget {
           _summary(context),
           Padding(
             padding: const EdgeInsets.only(top: 24, bottom: 8),
-            child: Text('Nodes, from the closest to the farthest',
+            child: Text(
+                result.maximize
+                    ? 'Nodes, once every path into them is known'
+                    : 'Nodes, from the closest to the farthest',
                 style: Theme.of(context).textTheme.titleMedium),
           ),
-          const Text(
-            'Every round fixes the unvisited node with the smallest known distance '
-            'and checks whether going through it shortens the distance to its '
-            'neighbours. Non-directed edges (-) can be used in both directions; '
-            'directed edges (→) only from their origin to their destination.',
-            style: TextStyle(fontSize: 13),
+          Text(
+            result.maximize
+                ? 'Maximizing: every round fixes a node whose incoming edges were all '
+                    'already checked (topological order) and checks whether going through '
+                    'it lengthens the distance to its neighbours. Without cycles, the '
+                    'largest value is final once all its incoming edges were checked.'
+                : 'Every round fixes the unvisited node with the smallest known distance '
+                    'and checks whether going through it shortens the distance to its '
+                    'neighbours. Non-directed edges (-) can be used in both directions; '
+                    'directed edges (→) only from their origin to their destination.',
+            style: const TextStyle(fontSize: 13),
           ),
           const SizedBox(height: 8),
           for (var k = 0; k < result.steps.length; k++) _stepTile(context, k),

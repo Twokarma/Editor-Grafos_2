@@ -70,7 +70,11 @@ class DijkstraResult {
   final List<String> pathNodeIds;
   final List<DijkstraEdge> pathEdges;
 
+  /// true si se buscó el camino más largo en vez del más corto.
+  final bool maximize;
+
   const DijkstraResult({
+    this.maximize = false,
     required this.sourceId,
     required this.targetId,
     required this.distances,
@@ -80,7 +84,10 @@ class DijkstraResult {
   });
 
   bool get reachable => pathNodeIds.isNotEmpty;
-  double get totalDistance => distances[targetId] ?? double.infinity;
+  double get totalDistance => distances[targetId] ?? unreached;
+
+  /// Valor de un nodo no alcanzado: ∞ al minimizar, -∞ al maximizar.
+  double get unreached => maximize ? double.negativeInfinity : double.infinity;
 }
 
 class DijkstraAlgorithm {
@@ -90,9 +97,15 @@ class DijkstraAlgorithm {
     required List<DijkstraEdge> edges,
     required String sourceId,
     required String targetId,
+    bool maximize = false,
+    /// Nombres de los nodos, solo para los mensajes de error.
+    Map<String, String>? names,
   }) {
     if (!nodeIds.contains(sourceId) || !nodeIds.contains(targetId)) {
       throw ArgumentError('Origin or destination is not in the graph.');
+    }
+    if (maximize) {
+      return _solveMax(nodeIds: nodeIds, edges: edges, sourceId: sourceId, targetId: targetId, names: names);
     }
     for (final e in edges) {
       if (e.weight < 0) {
@@ -156,10 +169,143 @@ class DijkstraAlgorithm {
       steps.add(DijkstraStep(current, dist[current]!, relaxations));
     }
 
-    // Reconstruir el camino hacia atrás desde el destino.
+    return _result(
+      sourceId: sourceId,
+      targetId: targetId,
+      dist: dist,
+      steps: steps,
+      cameFrom: cameFrom,
+      cameBy: cameBy,
+      reached: dist[targetId] != double.infinity,
+      maximize: false,
+    );
+  }
+
+  /// Camino más largo. Solo está bien definido (y se puede resolver fijando
+  /// nodos como Dijkstra) si lo alcanzable desde el origen es dirigido y sin
+  /// ciclos: con un ciclo se podría dar vueltas sumando peso. Los nodos se
+  /// fijan en orden topológico, así cada uno se fija cuando ya llegaron todos
+  /// sus caminos, y se queda con el mayor.
+  ///
+  /// Lanza [ArgumentError] si hay una arista no dirigida, un lazo o un ciclo
+  /// alcanzables desde el origen. Admite pesos negativos.
+  static DijkstraResult _solveMax({
+    required List<String> nodeIds,
+    required List<DijkstraEdge> edges,
+    required String sourceId,
+    required String targetId,
+    Map<String, String>? names,
+  }) {
+    String name(String id) => names?[id] ?? id;
+    final out = {for (final id in nodeIds) id: <DijkstraEdge>[]};
+    for (final e in edges) {
+      out[e.source]?.add(e);
+      if (!e.directed) out[e.target]?.add(e);
+    }
+
+    // Nodos alcanzables desde el origen.
+    final reachable = <String>{sourceId};
+    final stack = [sourceId];
+    while (stack.isNotEmpty) {
+      final current = stack.removeLast();
+      for (final e in out[current]!) {
+        final next = e.source == current ? e.target : e.source;
+        if (reachable.add(next)) stack.add(next);
+      }
+    }
+
+    for (final e in edges) {
+      if (!reachable.contains(e.source) && !reachable.contains(e.target)) continue;
+      if (e.source == e.target) {
+        throw ArgumentError('To maximize there can be no self loops (loop on ${name(e.source)}).');
+      }
+      if (!e.directed) {
+        throw ArgumentError('To maximize every edge must be directed: a non-directed edge '
+            '(${name(e.source)} - ${name(e.target)}) can be crossed back and forth.');
+      }
+    }
+
+    // Orden topológico (Kahn) de la parte alcanzable.
+    final inDegree = {for (final id in reachable) id: 0};
+    for (final id in reachable) {
+      for (final e in out[id]!) {
+        inDegree[e.target] = inDegree[e.target]! + 1;
+      }
+    }
+
+    final dist = {for (final id in nodeIds) id: double.negativeInfinity};
+    final cameFrom = <String, String>{};
+    final cameBy = <String, DijkstraEdge>{};
+    final fixed = <String>{};
+    final steps = <DijkstraStep>[];
+    dist[sourceId] = 0;
+
+    while (true) {
+      String? current;
+      for (final id in nodeIds) {
+        if (reachable.contains(id) && !fixed.contains(id) && inDegree[id] == 0) {
+          current = id;
+          break;
+        }
+      }
+      if (current == null) break;
+      fixed.add(current);
+
+      final relaxations = <DijkstraRelaxation>[];
+      for (final e in out[current]!) {
+        final neighbor = e.target;
+        inDegree[neighbor] = inDegree[neighbor]! - 1;
+        final candidate = dist[current]! + e.weight;
+        final previous = dist[neighbor]!;
+        final improved = candidate > previous;
+        if (improved) {
+          dist[neighbor] = candidate;
+          cameFrom[neighbor] = current;
+          cameBy[neighbor] = e;
+        }
+        relaxations.add(DijkstraRelaxation(
+          edge: e,
+          from: current,
+          to: neighbor,
+          candidate: candidate,
+          previous: previous,
+          improved: improved,
+        ));
+      }
+      steps.add(DijkstraStep(current, dist[current]!, relaxations));
+    }
+
+    if (fixed.length != reachable.length) {
+      throw ArgumentError('To maximize the graph can have no cycles: there is a cycle '
+          'reachable from the origin, so the path could grow forever.');
+    }
+
+    return _result(
+      sourceId: sourceId,
+      targetId: targetId,
+      dist: dist,
+      steps: steps,
+      cameFrom: cameFrom,
+      cameBy: cameBy,
+      reached: reachable.contains(targetId),
+      maximize: true,
+    );
+  }
+
+  /// Reconstruye el camino hacia atrás desde el destino.
+  static DijkstraResult _result({
+    required String sourceId,
+    required String targetId,
+    required Map<String, double> dist,
+    required List<DijkstraStep> steps,
+    required Map<String, String> cameFrom,
+    required Map<String, DijkstraEdge> cameBy,
+    required bool reached,
+    required bool maximize,
+  }) {
     var pathNodes = <String>[];
     var pathEdges = <DijkstraEdge>[];
-    if (dist[targetId] != double.infinity) {
+    if (reached) {
       var node = targetId;
       pathNodes.add(node);
       while (node != sourceId) {
@@ -172,6 +318,7 @@ class DijkstraAlgorithm {
     }
 
     return DijkstraResult(
+      maximize: maximize,
       sourceId: sourceId,
       targetId: targetId,
       distances: dist,

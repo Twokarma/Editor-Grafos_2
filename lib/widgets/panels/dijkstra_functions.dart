@@ -12,6 +12,8 @@ class DijkstraFunctions extends StatelessWidget {
   final String? from;
   final String? to;
   final bool canSolve;
+  final bool maximize;
+  final ValueChanged<bool> onMaximizeChanged;
   final ValueChanged<String?> onFromChanged;
   final ValueChanged<String?> onToChanged;
   final VoidCallback onSolve;
@@ -27,6 +29,8 @@ class DijkstraFunctions extends StatelessWidget {
     required this.from,
     required this.to,
     required this.canSolve,
+    required this.maximize,
+    required this.onMaximizeChanged,
     required this.onFromChanged,
     required this.onToChanged,
     required this.onSolve,
@@ -94,7 +98,7 @@ class DijkstraFunctions extends StatelessWidget {
             value: format(result.pathEdges[i].weight),
           ),
         const Divider(height: 12),
-        ResultRow(label: 'Distancia total', value: format(result.totalDistance), bold: true),
+        ResultRow(label: result.maximize ? 'Distancia total (máxima)' : 'Distancia total', value: format(result.totalDistance), bold: true),
         Padding(
           padding: const EdgeInsets.only(left: 4, top: 2),
           child: Text(
@@ -115,7 +119,9 @@ class DijkstraFunctions extends StatelessWidget {
       children: [
         ResultBox(
           error: message,
-          placeholder: 'Elige origen y destino y busca el camino más corto',
+          placeholder: maximize
+              ? 'Elige origen y destino y busca el camino más largo'
+              : 'Elige origen y destino y busca el camino más corto',
           child: current == null ? null : _resultView(context, current),
         ),
         const SizedBox(height: 16),
@@ -138,8 +144,33 @@ class DijkstraFunctions extends StatelessWidget {
                 );
         }),
         const SizedBox(height: 16),
+        SegmentedButton<bool>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment<bool>(value: false, label: Text('Minimizar'), icon: Icon(Icons.south)),
+            ButtonSegment<bool>(value: true, label: Text('Maximizar'), icon: Icon(Icons.north)),
+          ],
+          selected: {maximize},
+          onSelectionChanged: (s) => onMaximizeChanged(s.first),
+          style: SegmentedButton.styleFrom(
+            selectedBackgroundColor: AppColors.blue,
+            selectedForegroundColor: AppColors.white,
+            foregroundColor: AppColors.darkBlue,
+            side: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+          ),
+        ),
+        if (maximize)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Para maximizar, las aristas deben ser dirigidas y sin ciclos',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.gray, fontSize: 12),
+            ),
+          ),
+        const SizedBox(height: 16),
         PillButton(
-          label: 'Camino más corto',
+          label: maximize ? 'Camino más largo' : 'Camino más corto',
           icon: Icons.alt_route,
           style: AppButtonStyle.accent,
           onTap: canSolve ? onSolve : null,
