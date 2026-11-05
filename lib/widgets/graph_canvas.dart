@@ -16,9 +16,15 @@ import '../theme/app_colors.dart';
 
 class GraphWidget extends StatefulWidget{
   final CanvasOverlay canvasOverlay;
+
+  /// Si es false, al conectar o editar aristas solo se ofrece "non-directed".
+  /// Por defecto true, así las demás pantallas no cambian.
+  final bool allowDirected;
+
   const GraphWidget({
     super.key,
     this.canvasOverlay = const DefaultOverlay(),
+    this.allowDirected = true,
   });
 
   @override
@@ -139,7 +145,13 @@ class _GraphWidgetState extends State<GraphWidget> {
               SnackBar(content: Text(message)),
             );
           } else {
-            showEdgeDialog(context, provider, source: sourceNode, target: tap);
+            showEdgeDialog(
+              context,
+              provider,
+              source: sourceNode,
+              target: tap,
+              allowDirected: widget.allowDirected,
+            );
           }
         }
 
@@ -198,7 +210,12 @@ class _GraphWidgetState extends State<GraphWidget> {
         } else {
           tap = graphProvider.findEdgeAt(details.localPosition.dx, details.localPosition.dy);
           if(tap.startsWith("e")) {
-            showEditEdgeDialog(context, graphProvider, tap);
+            showEditEdgeDialog(
+              context,
+              graphProvider,
+              tap,
+              allowDirected: widget.allowDirected,
+            );
           }
         }
 

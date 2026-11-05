@@ -8,10 +8,14 @@ void showEdgeDialog(
     GraphProvider provider, {
       required String source,
       required String target,
+      // Si es false (p. ej. Dijkstra), solo se crean aristas non-directed.
+      bool allowDirected = true,
     }) {
   final controller = TextEditingController();
-  bool isDirected = true;
-  bool onlyDirected = provider.rules.forcesDirected();
+  final bool onlyDirected = provider.rules.forcesDirected();
+  // Se muestra el selector solo si ambas opciones son posibles.
+  final bool showToggle = allowDirected && !onlyDirected;
+  bool isDirected = onlyDirected ? true : allowDirected;
 
   showDialog(
     context: context,
@@ -23,30 +27,28 @@ void showEdgeDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Visibility(
-                    visible: !onlyDirected,
-                    maintainSize: false,
-                    maintainState: true,
-                    child: ToggleButtons(
-                      isSelected: [isDirected, !isDirected],
-                      onPressed: (index) {
-                        setDialogState(() {
-                          isDirected = index == 0;
-                        });
-                      },
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text("Directed"),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text("Non-directed"),
-                        ),
-                      ],
-                    ),
-                ),
-                
+                if (showToggle)
+                  ToggleButtons(
+                    isSelected: [isDirected, !isDirected],
+                    onPressed: (index) {
+                      setDialogState(() {
+                        isDirected = index == 0;
+                      });
+                    },
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("Directed"),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("Non-directed"),
+                      ),
+                    ],
+                  )
+                else if (!allowDirected)
+                  const Text("Non-directed"),
+
                 const SizedBox(height: 12),
                 TextField(
                   controller: controller,

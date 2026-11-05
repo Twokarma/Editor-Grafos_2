@@ -4,7 +4,15 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../providers/graph_provider.dart';
 
 
-Future<void> showEditEdgeDialog(BuildContext context, GraphProvider provider, String edgeId) {
+// [allowDirected] se acepta para que GraphWidget pueda pasarlo igual que a
+// showEdgeDialog. Este diálogo solo edita el peso, no el tipo de arista, así
+// que hoy no hace falta usarlo.
+Future<void> showEditEdgeDialog(
+  BuildContext context,
+  GraphProvider provider,
+  String edgeId, {
+  bool allowDirected = true,
+}) {
   final edge = provider.graphGetter().edges[edgeId]!;
   final controller = TextEditingController(text: edge.weight.toString());
 

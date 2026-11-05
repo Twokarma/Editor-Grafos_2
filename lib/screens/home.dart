@@ -17,7 +17,9 @@ import 'package:graph_maker_app_2/screens/kruskal_screen.dart';
 import 'package:graph_maker_app_2/rules/transport_rules.dart';
 import 'package:graph_maker_app_2/screens/transportation_screen.dart';
 import 'package:graph_maker_app_2/screens/shell_sort.dart';
+import 'package:graph_maker_app_2/screens/dijkstra_screen.dart';
 
+import 'package:graph_maker_app_2/rules/dijkstra_rules.dart';
 /* ==========================================================
    MENÚ PRINCIPAL (equivalente a la página web Graph M4ker)
    - Para agregar un concepto: añade un _Concept a _concepts.
@@ -78,6 +80,7 @@ void _pushWithCopy(
   GraphRules rules,
   Widget Function(GraphProvider main) screen,
 ) {
+  
   final main = context.read<GraphProvider>();
   Navigator.of(context).push(
     MaterialPageRoute(
@@ -119,7 +122,16 @@ final _methods = <_Method>[
      'Encuentra el árbol de expansión de peso mínimo (o máximo) uniendo las aristas sin formar ciclos.',
      Icons.account_tree_outlined,
      (ctx) => _pushWithCopy(ctx, KruskalRules(), (main) => KruskalScreen(mainProvider: main)),
-   ),   
+   ),
+
+    _Method(
+    'Dijkstra Algorithm',
+    'Encuentra el camino más corto entre dos nodos, con aristas dirigidas y no dirigidas.',
+    Icons.directions,
+    (ctx) => _pushWithCopy(ctx, DijkstraRules(), (main) => DijkstraScreen(mainProvider: main)),
+  ),
+
+
   _Method(
     'Selection Sort',
     'Ordena una lista seleccionando en cada paso el menor elemento restante.',
