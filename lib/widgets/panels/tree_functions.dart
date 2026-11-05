@@ -10,6 +10,8 @@ class TreeTourKeys {
   final GlobalKey postField = GlobalKey();
   final GlobalKey otherField = GlobalKey();
   final GlobalKey build = GlobalKey();
+  final GlobalKey insertField = GlobalKey();
+  final GlobalKey insert = GlobalKey();
   final GlobalKey count = GlobalKey();
   final GlobalKey generate = GlobalKey();
 }
@@ -153,6 +155,11 @@ class TreeFunctions extends StatelessWidget {
   final String? buildError;
   final VoidCallback? onBuild;
 
+  final TextEditingController insertController;
+  final FocusNode? insertFocusNode;
+  final String? insertError;
+  final VoidCallback? onInsert;
+
   final int nodeCount;
   final int maxNodes;
   final ValueChanged<int> onNodeCountChanged;
@@ -169,6 +176,10 @@ class TreeFunctions extends StatelessWidget {
     required this.otherController,
     required this.buildError,
     required this.onBuild,
+    required this.insertController,
+    this.insertFocusNode,
+    required this.insertError,
+    required this.onInsert,
     required this.nodeCount,
     required this.maxNodes,
     required this.onNodeCountChanged,
@@ -181,7 +192,17 @@ class TreeFunctions extends StatelessWidget {
         child: Text(title, style: _sectionStyle),
       );
 
-  Widget _field(BuildContext context, String label, TextEditingController controller, GlobalKey? key, TextInputAction action) {
+  Widget _field(
+    BuildContext context,
+    String label,
+    TextEditingController controller,
+    GlobalKey? key,
+    TextInputAction action, {
+    required String hint,
+    VoidCallback? onSubmit,
+    FocusNode? focusNode,
+    bool keepFocus = false,
+  }) {
     final OutlineInputBorder border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(28),
       borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
@@ -189,20 +210,21 @@ class TreeFunctions extends StatelessWidget {
     return TextField(
       key: key,
       controller: controller,
+      focusNode: focusNode,
       textInputAction: action,
       autocorrect: false,
       enableSuggestions: false,
       style: const TextStyle(color: AppColors.darkBlue, fontSize: 16, letterSpacing: 0.5),
       cursorColor: AppColors.blue,
       onTapOutside: (_) => FocusScope.of(context).unfocus(),
-      onSubmitted: action == TextInputAction.done ? (_) => onBuild?.call() : null,
+      onSubmitted: onSubmit == null ? null : (_) => onSubmit(),
+      // Keeps the keyboard open so values can be typed one after another.
+      onEditingComplete: keepFocus ? () {} : null,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppColors.darkBlue),
         floatingLabelStyle: const TextStyle(color: AppColors.blue),
-        hintText: controller == postController
-            ? 'Ej.: 2, 5, 4, 9, 8, 7'
-            : (pair == TreePair.postIn ? 'Ej.: 2, 4, 5, 7, 8, 9' : 'Ej.: 7, 4, 2, 5, 8, 9'),
+        hintText: hint,
         hintStyle: const TextStyle(color: AppColors.gray),
         filled: true,
         fillColor: AppColors.white,
@@ -247,9 +269,12 @@ class TreeFunctions extends StatelessWidget {
         _section('Construir desde recorridos'),
         _pairSelector(),
         const SizedBox(height: 12),
-        _field(context, 'Postorden', postController, keys?.postField, TextInputAction.next),
+        _field(context, 'Postorden', postController, keys?.postField, TextInputAction.next,
+            hint: 'Ej.: 2, 5, 4, 9, 8, 7'),
         const SizedBox(height: 12),
-        _field(context, pair.other.label, otherController, keys?.otherField, TextInputAction.done),
+        _field(context, pair.other.label, otherController, keys?.otherField, TextInputAction.done,
+            hint: pair == TreePair.postIn ? 'Ej.: 2, 4, 5, 7, 8, 9' : 'Ej.: 7, 4, 2, 5, 8, 9',
+            onSubmit: onBuild),
         const SizedBox(height: 12),
         PillButton(
           key: keys?.build,
@@ -264,6 +289,33 @@ class TreeFunctions extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               buildError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600),
+            ),
+          ),
+
+        const Divider(height: 32),
+
+        _section('Insertar valores'),
+        _field(context, 'Valor', insertController, keys?.insertField, TextInputAction.done,
+            hint: 'Ej.: 7  (o varios: 7, 4, 9)',
+            onSubmit: onInsert,
+            focusNode: insertFocusNode,
+            keepFocus: true),
+        const SizedBox(height: 12),
+        PillButton(
+          key: keys?.insert,
+          label: 'Insertar',
+          icon: Icons.add_circle_outline,
+          style: AppButtonStyle.accent,
+          onTap: onInsert,
+          fullWidth: true,
+        ),
+        if (insertError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              insertError!,
               textAlign: TextAlign.center,
               style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600),
             ),

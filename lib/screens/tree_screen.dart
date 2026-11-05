@@ -37,6 +37,10 @@ class _TreeScreenState extends State<TreeScreen> {
   final TextEditingController _otherController = TextEditingController();
   String? _buildError;
 
+  final TextEditingController _insertController = TextEditingController();
+  final FocusNode _insertFocus = FocusNode();
+  String? _insertError;
+
   int _nodeCount = 7;
 
   Traversal? _selectedTraversal;
@@ -55,17 +59,24 @@ class _TreeScreenState extends State<TreeScreen> {
     _lastAppliedJson = jsonEncode(_copy.graphGetter().toJson());
     _postController.addListener(_onFieldsChanged);
     _otherController.addListener(_onFieldsChanged);
+    _insertController.addListener(_onInsertChanged);
   }
 
   @override
   void dispose() {
     _postController.dispose();
     _otherController.dispose();
+    _insertController.dispose();
+    _insertFocus.dispose();
     super.dispose();
   }
 
   void _onFieldsChanged() {
     setState(() => _buildError = null);
+  }
+
+  void _onInsertChanged() {
+    setState(() => _insertError = null);
   }
 
   bool get _isMobile => MediaQuery.sizeOf(context).width < Breakpoints.mobileUntil;
@@ -99,6 +110,23 @@ class _TreeScreenState extends State<TreeScreen> {
     _autoText[_postController] = _postController.text;
     _autoText[_otherController] = _otherController.text;
     _drawTree(result.root!);
+  }
+
+  void _insert() {
+    final List<String> values = BinaryTree.parseList(_insertController.text);
+    final TreeResult current = BinaryTree.fromGraph(_copy.graphGetter());
+    if (!current.isOk) {
+      setState(() => _insertError = 'Corrige el árbol del lienzo antes de insertar: ${current.error}');
+      return;
+    }
+    final TreeResult result = BinaryTree.insertAll(current.root, values);
+    if (!result.isOk) {
+      setState(() => _insertError = result.error);
+      return;
+    }
+    _drawTree(result.root!);
+    _insertController.clear();
+    _insertFocus.requestFocus();
   }
 
   void _generate() {
@@ -167,6 +195,12 @@ class _TreeScreenState extends State<TreeScreen> {
       TourStep(_tourKeys.otherField, 'Segundo recorrido', 'El inorden o preorden de los mismos valores.',
           align: align, shape: ShapeLightFocus.RRect),
       TourStep(_tourKeys.build, 'Construir', 'Dibuja el único árbol que tiene esos dos recorridos.',
+          align: align, shape: ShapeLightFocus.RRect),
+      TourStep(_tourKeys.insertField, 'Insertar valores',
+          'Escribe un valor y pulsa Enter para agregarlo al árbol del lienzo siguiendo la regla: '
+          'menor o igual a la izquierda, mayor a la derecha. Puedes escribir varios separados por comas.',
+          align: align, shape: ShapeLightFocus.RRect),
+      TourStep(_tourKeys.insert, 'Insertar', 'Agrega los valores, uno por uno y en orden, al árbol actual.',
           align: align, shape: ShapeLightFocus.RRect),
       TourStep(_tourKeys.count, 'Cantidad de nodos', 'Tamaño del árbol aleatorio.',
           align: align, shape: ShapeLightFocus.RRect),
@@ -249,6 +283,10 @@ class _TreeScreenState extends State<TreeScreen> {
       otherController: _otherController,
       buildError: _buildError,
       onBuild: canBuild ? _build : null,
+      insertController: _insertController,
+      insertFocusNode: _insertFocus,
+      insertError: _insertError,
+      onInsert: _insertController.text.trim().isNotEmpty ? _insert : null,
       nodeCount: _nodeCount,
       maxNodes: _maxNodes,
       onNodeCountChanged: (n) => setState(() => _nodeCount = n),

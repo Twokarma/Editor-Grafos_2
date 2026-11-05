@@ -390,6 +390,23 @@ class BinaryTree {
     }
   }
 
+  /// Inserts [valuesText] one by one, in order, into [root] following the
+  /// search rule (≤ goes left, > goes right). [root] is modified in place.
+  static TreeResult insertAll(TreeNode? root, List<String> valuesText) {
+    if (valuesText.isEmpty) return const TreeResult.fail('Escribe un valor para insertar');
+    final List<double> values = [];
+    for (final String s in valuesText) {
+      final double? v = parseValue(s);
+      if (v == null) return TreeResult.fail('"$s" no es un número (los decimales van con punto: 3.5)');
+      values.add(v);
+    }
+    TreeNode? current = root;
+    for (final double v in values) {
+      current = insert(current, v);
+    }
+    return TreeResult.ok(current);
+  }
+
   static TreeNode random(int n, [Random? rng]) {
     final Random r = rng ?? Random();
     final int size = n.clamp(1, maxRandomValue);
