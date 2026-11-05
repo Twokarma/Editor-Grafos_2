@@ -13,9 +13,11 @@ void showEdgeDialog(
     }) {
   final controller = TextEditingController();
   final bool onlyDirected = provider.rules.forcesDirected();
+  // Kruskal: siempre no dirigida, sin selector ni etiqueta.
+  final bool onlyUndirected = provider.rules.forcesUndirected();
   // Se muestra el selector solo si ambas opciones son posibles.
-  final bool showToggle = allowDirected && !onlyDirected;
-  bool isDirected = onlyDirected ? true : allowDirected;
+  final bool showToggle = allowDirected && !onlyDirected && !onlyUndirected;
+  bool isDirected = onlyDirected ? true : (allowDirected && !onlyUndirected);
 
   showDialog(
     context: context,
@@ -46,7 +48,7 @@ void showEdgeDialog(
                       ),
                     ],
                   )
-                else if (!allowDirected)
+                else if (!allowDirected && !onlyUndirected)
                   const Text("Non-directed"),
 
                 const SizedBox(height: 12),
