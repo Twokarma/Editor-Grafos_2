@@ -15,9 +15,9 @@ class Graph {
   static const int overLapDistance = 10;
   static const double _parallelEdgeOffset = 7.5;
 
-  void addNode(double x,double y) {
+  void addNode(double x,double y, {String? name}) {
     String id = "n$currentNode";
-    nodes[id] = Node(id, generateNodeName(), x, y, radius);
+    nodes[id] = Node(id, name ?? generateNodeName(), x, y, radius);
     currentNode++;
   }
 
@@ -75,10 +75,18 @@ class Graph {
     return nodeId;
   }
 
-  List<Edge> findEdges(String id) {
+  List<Edge> findEdgesFrom(String id) {
     List<Edge> xEdges = [];
     edges.forEach((key, edge){
       if(edge.sourceNodeId == id) xEdges.add(edge);
+    });
+    return xEdges;
+  }
+
+  List<Edge> findEdgesTo(String id) {
+    List<Edge> xEdges = [];
+    edges.forEach((key, edge){
+      if(edge.targetNodeId == id) xEdges.add(edge);
     });
     return xEdges;
   }

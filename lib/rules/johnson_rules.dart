@@ -28,7 +28,7 @@ class JohnsonRules extends GraphRules{
       if(nodeId == fromId) return "This edge would create a cycle";
       if(visitedNodes.contains(nodeId)) continue;
       visitedNodes.add(nodeId);
-      edges.addAll(graph.findEdges(nodeId));
+      edges.addAll(graph.findEdgesFrom(nodeId));
       for(Edge edge in edges){
         nodes.add(edge.targetNodeId);
       }

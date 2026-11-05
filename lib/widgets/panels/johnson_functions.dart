@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/models/node.dart';
 import 'package:graph_maker_app_2/services/johnson_service.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
-import 'package:graph_maker_app_2/widgets/ui/panel_card.dart';
 import 'package:graph_maker_app_2/widgets/ui/pill_button.dart';
 
 class JohnsonFunctions extends StatelessWidget{
@@ -90,9 +89,7 @@ class JohnsonFunctions extends StatelessWidget{
   @override
   Widget build(BuildContext context){
     final List<DropdownMenuEntry<String>> dropdownMenuEntries = _dropdownMenuEntries();
-    return PanelCard(
-        title: "Funciones",
-        child: Column(
+    return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -180,7 +177,6 @@ class JohnsonFunctions extends StatelessWidget{
               fullWidth: true,
             ),
           ],
-        )
     );
   }
 

@@ -33,6 +33,7 @@ class AppColors {
   static const Color gridColor = Color.fromARGB(255, 179, 179, 179);
   //johnson
   static const Color johnsonNodeLines = Color.fromARGB(255, 0, 41, 71);
+  static const Color treeOrderBadge = Color.fromARGB(255, 251, 133, 0);
   //new palette
   static const Color darkBlue = Color.fromARGB(255, 2, 48, 71);
   static const Color blue = Color.fromARGB(255, 33, 158, 188);
@@ -45,6 +46,7 @@ class AppColors {
   static const Color white = Color.fromARGB(255, 255, 255, 255);
   static const Color paper = Color.fromARGB(255, 230, 231, 233);
   static const Color gray = Color.fromARGB(255, 120, 120, 120);
+  static const Color black = Color.fromARGB(255, 0, 0, 0);
 
   static const Color navHover = Color.fromARGB(31, 33, 158, 188);
   static const Color navActive = Color.fromARGB(46, 33, 158, 188);

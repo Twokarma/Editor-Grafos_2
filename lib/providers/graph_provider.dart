@@ -32,11 +32,16 @@ class GraphProvider extends ChangeNotifier{
     notifyListeners();
   }
 
-  String? addNode(double x,double y){
+  String? addNode(double x,double y, {String? name}){
     String? message = rules.checkAddNode(_graph, x, y);
     if(message != null) return message;
+    if(name != null){
+      message = rules.checkNodeName(_graph, null, name);
+      if(message != null) return message;
+      name = rules.normalizeNodeName(name);
+    }
     _pushHistory();
-    _graph.addNode(x, y);
+    _graph.addNode(x, y, name: name);
     notifyListeners();
     return null;
   }
@@ -82,11 +87,17 @@ class GraphProvider extends ChangeNotifier{
     notifyListeners();
   }
 
-  void updateNode(String id,{String? newName, int? newColor}){
+  String? updateNode(String id,{String? newName, int? newColor}){
+    if(newName != null){
+      String? message = rules.checkNodeName(_graph, id, newName);
+      if(message != null) return message;
+      newName = rules.normalizeNodeName(newName);
+    }
     _pushHistory();
-    _graph.renameNode(id, newName!);
-    _graph.recolorNode(id, newColor!);
+    if(newName != null) _graph.renameNode(id, newName);
+    if(newColor != null) _graph.recolorNode(id, newColor);
     notifyListeners();
+    return null;
   }
 
   void updateEdgeWeight(String id, double newWeight) {

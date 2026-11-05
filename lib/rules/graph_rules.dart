@@ -7,6 +7,14 @@ abstract class GraphRules {
 
   bool forcesDirected() => false;
 
+  bool get nodesAreValues => false;
+
+  double? get autoEdgeWeight => null;
+
+  String? checkNodeName(Graph graph, String? nodeId, String name) => null;
+
+  String normalizeNodeName(String name) => name;
+
   String? checkAddNode(Graph graph, double x, double y){
     String nodeId = "";
     double radius = graph.radius;

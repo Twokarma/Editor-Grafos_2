@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../algorithms/dijkstra.dart';
+import '../layout/editor_shell.dart';
+import '../layout/options_config.dart';
+import '../models/app_mode.dart';
 import '../providers/graph_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/dialogs/confirm_exit_dialog.dart';
 import '../widgets/dialogs/open_graph_dialog.dart';
 import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
-import '../widgets/menu_option.dart';
 import '../widgets/overlays/highlight_overlay.dart';
+import '../widgets/panels/dijkstra_functions.dart';
 import 'dijkstra_steps_screen.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -119,7 +122,6 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
       _names = names;
       _pathEdgeIds = {for (final e in result.pathEdges) e.id};
     });
-    _showSummary(result);
   }
 
   void _openManual() {
@@ -140,105 +142,31 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
     );
   }
 
-  void _showSummary(DijkstraResult result) {
-    final from = _names[result.sourceId];
-    final to = _names[result.targetId];
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.6,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!result.reachable)
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(
-                        'There is no path from $from to $to.',
-                        style: TextStyle(color: Theme.of(sheetContext).colorScheme.error),
-                      ),
-                    )
-                  else ...[
-                    ListTile(
-                      title: Text('Shortest path: $from to $to'),
-                      subtitle: Text(
-                        result.pathNodeIds.map((id) => _names[id]).join(' → '),
-                      ),
-                    ),
-                    Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: result.pathEdges.length,
-                        itemBuilder: (BuildContext context, int i) {
-                          final edge = result.pathEdges[i];
-                          final link = edge.directed ? '→' : '-';
-                          return ListTile(
-                            title: Text(
-                              '${_names[result.pathNodeIds[i]]} $link ${_names[result.pathNodeIds[i + 1]]}',
-                            ),
-                            trailing: Text(_fmt(edge.weight)),
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      title: const Text('Total distance:'),
-                      subtitle: Text('${result.pathEdges.length} edges'),
-                      trailing: Text(_fmt(result.totalDistance)),
-                    ),
-                  ],
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        _openSteps();
-                      },
-                      icon: const Icon(Icons.list_alt),
-                      label: const Text('Show steps'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  void _apply(String currentGraph) {
+    widget.mainProvider.replaceGraph(_copy.snapshot());
+    setState(() {
+      _lastAppliedJson = currentGraph;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Grafo actualizado')),
     );
   }
 
-  Widget _nodePicker({
-    required String label,
-    required String? value,
-    required Map<String, String> nodes,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: value,
-          items: [
-            for (final entry in nodes.entries)
-              DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-          ],
-          onChanged: onChanged,
-        ),
-      ),
-    );
+  void _select({String? source, String? target}) {
+    setState(() {
+      if (source != null) _sourceId = source;
+      if (target != null) _targetId = target;
+      _result = null;
+      _pathEdgeIds = {};
+    });
+  }
+
+  String _summaryText(String? error) {
+    final DijkstraResult? result = _result;
+    if (error != null) return error;
+    if (result == null) return 'Elige origen y destino en Funciones';
+    if (!result.reachable) return 'No hay camino de ${_names[result.sourceId]} a ${_names[result.targetId]}';
+    return '${result.pathNodeIds.map((id) => _names[id]).join(' → ')} = ${_fmt(result.totalDistance)}';
   }
 
   @override
@@ -257,21 +185,16 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
     final bool canSolve =
         error == null && sourceValue != null && targetValue != null;
 
-    void handleMenuSelection(BuildContext context, MenuOption option) {
-      switch (option) {
-        case MenuOption.save:
-          showSaveDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.open:
-          showOpenDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.clear:
-          graphProviderCopy.clearGraph();
-          break;
-        default:
-          break;
-      }
-    }
+    final OptionsConfig options = OptionsConfig(
+      onApply: () => _apply(currentGraph),
+      onUndo: graphProviderCopy.undo,
+      onOpen: () => showOpenDialog(context, graphProviderCopy),
+      onSave: () => showSaveDialog(context, graphProviderCopy),
+      onClear: graphProviderCopy.clearGraph,
+      onManual: _openManual,
+      hasChanges: hasChanges,
+      canUndo: graphProviderCopy.canUndo,
+    );
 
     return PopScope(
       canPop: !hasChanges,
@@ -279,134 +202,36 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
         if (didPop) return;
         showConfirmExitDialog(context, _copy);
       }),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Dijkstra"),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: "Manual",
-              onPressed: _openManual,
-            ),
-            IconButton(
-              icon: const Icon(Icons.publish),
-              tooltip: "Apply to main graph",
-              onPressed: hasChanges
-                  ? () {
-                      widget.mainProvider.replaceGraph(_copy.snapshot());
-                      setState(() {
-                        _lastAppliedJson = currentGraph;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Graph Updated')),
-                      );
-                    }
-                  : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.undo),
-              tooltip: "Undo",
-              onPressed: graphProviderCopy.canUndo ? () => graphProviderCopy.undo() : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.list_alt),
-              tooltip: "Show steps",
-              onPressed: _result != null ? _openSteps : null,
-            ),
-            PopupMenuButton<MenuOption>(
-              onSelected: (option) => handleMenuSelection(context, option),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.save,
-                  child: ListTile(
-                    leading: Icon(Icons.save_outlined),
-                    title: Text('Save'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.open,
-                  child: ListTile(
-                    leading: Icon(Icons.folder_open_outlined),
-                    title: Text('Open'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.clear,
-                  child: ListTile(
-                    leading: Icon(Icons.delete_sweep_outlined),
-                    title: Text('Clear'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: EditorShell(
+        mode: AppMode.dijkstra,
         // Sin allowDirected: false, el diálogo de arista ofrece
         // Directed y Non-directed.
-        body: GraphWidget(
+        canvas: GraphWidget(
           canvasOverlay: HighlightOverlay(_pathEdgeIds, AppColors.assignmentEdge),
         ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      error,
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                    ),
-                  ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _nodePicker(
-                        label: 'From',
-                        value: sourceValue,
-                        nodes: nodes,
-                        onChanged: (v) => setState(() {
-                          _sourceId = v;
-                          _result = null;
-                          _pathEdgeIds = {};
-                        }),
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Expanded(
-                      child: _nodePicker(
-                        label: 'To',
-                        value: targetValue,
-                        nodes: nodes,
-                        onChanged: (v) => setState(() {
-                          _targetId = v;
-                          _result = null;
-                          _pathEdgeIds = {};
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8.0),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: canSolve ? _solve : null,
-                    icon: const Icon(Icons.alt_route),
-                    label: const Text('Shortest path'),
-                  ),
-                ),
-              ],
-            ),
+        functions: DijkstraFunctions(
+          message: error,
+          result: _result,
+          names: _names,
+          nodes: nodes,
+          from: sourceValue,
+          to: targetValue,
+          canSolve: canSolve,
+          onFromChanged: (v) => _select(source: v),
+          onToChanged: (v) => _select(target: v),
+          onSolve: _solve,
+          onOpenSteps: _result != null ? _openSteps : null,
+          format: _fmt,
+        ),
+        summary: Text(
+          _summaryText(error),
+          style: TextStyle(
+            fontSize: 15,
+            color: error != null ? Theme.of(context).colorScheme.error : AppColors.blue,
           ),
         ),
+        options: options,
+        hint: 'Elige origen y destino en Funciones',
       ),
     );
   }

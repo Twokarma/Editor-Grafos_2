@@ -11,6 +11,7 @@ import '../models/assignment_overlay.dart';
 import '../providers/graph_provider.dart';
 import 'dialogs/edge_dialog.dart';
 import 'dialogs/edit_node_dialog.dart';
+import 'dialogs/node_value_dialog.dart';
 import 'graph_painter.dart';
 import '../theme/app_colors.dart';
 
@@ -144,6 +145,11 @@ class _GraphWidgetState extends State<GraphWidget> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(message)),
             );
+          } else if (provider.rules.autoEdgeWeight != null) {
+            final String? added = provider.addEdge(sourceNode, tap, provider.rules.autoEdgeWeight!, true);
+            if (added != null) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(added)));
+            }
           } else {
             showEdgeDialog(
               context,
@@ -209,7 +215,7 @@ class _GraphWidgetState extends State<GraphWidget> {
           showEditNodeDialog(context, graphProvider, tap);
         } else {
           tap = graphProvider.findEdgeAt(details.localPosition.dx, details.localPosition.dy);
-          if(tap.startsWith("e")) {
+          if(tap.startsWith("e") && graphProvider.rules.autoEdgeWeight == null) {
             showEditEdgeDialog(
               context,
               graphProvider,
@@ -219,7 +225,16 @@ class _GraphWidgetState extends State<GraphWidget> {
           }
         }
 
-        if(tap == ""){
+        if(tap == "" && graphProvider.rules.nodesAreValues){
+          final double x = details.localPosition.dx;
+          final double y = details.localPosition.dy;
+          final String? tooClose = graphProvider.rules.checkAddNode(graphProvider.graphGetter(), x, y);
+          if(tooClose != null){
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tooClose)));
+          } else {
+            showNodeValueDialog(context, graphProvider, x, y);
+          }
+        } else if(tap == ""){
           String? message = graphProvider.addNode(details.localPosition.dx, details.localPosition.dy);
           if(message != null){
             ScaffoldMessenger.of(context).showSnackBar(

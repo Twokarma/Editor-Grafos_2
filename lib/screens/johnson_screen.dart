@@ -15,6 +15,7 @@ import 'package:graph_maker_app_2/widgets/panels/options_panel.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
+import '../layout/breakpoints.dart';
 import '../models/node.dart';
 import '../widgets/dialogs/open_graph_dialog.dart';
 import '../widgets/dialogs/save_graph_dialog.dart';
@@ -61,27 +62,28 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
   // ★ AYUDA: pasos del tour
   void _startTour() {
+    final align = MediaQuery.sizeOf(context).width < Breakpoints.mobileUntil ? ContentAlign.top : ContentAlign.left;
     List<TourStep> tourSteps = [
       TourStep(_fromKey, 'Desde (Origen)',
         'Vértice desde el que se calcula el camino.',
-        align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+        align: align, shape: ShapeLightFocus.RRect),
       TourStep(_toKey, 'Hacia (Destino)', 'Vértice al que quieres llegar.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+          align: align, shape: ShapeLightFocus.RRect),
       TourStep(_objectiveKey, 'Maximizar / Minimizar',
           'Cambia entre el camino de mayor costo y el de menor costo.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+          align: align, shape: ShapeLightFocus.RRect),
       TourStep(_matrixKey, 'Matriz M[x]',
           'Muestra las matrices de distancias calculadas por Johnson.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+          align: align, shape: ShapeLightFocus.RRect),
       TourStep(_undoKey, 'Deshacer',
           'Revierte la última acción en esta copia del grafo.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+          align: align, shape: ShapeLightFocus.RRect),
       TourStep(_publishKey, 'Aplicar al grafo principal',
           'Envía los cambios de esta copia al grafo principal. Se activa solo cuando hay cambios.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect),
+          align: align, shape: ShapeLightFocus.RRect),
       TourStep(_manualKey, 'Cómo usar Johnson',
           'Muestra una guía para utilizar la app con Johnson.',
-          align: ContentAlign.left, shape: ShapeLightFocus.RRect)
+          align: align, shape: ShapeLightFocus.RRect)
     ].where((s) => s.key.currentContext != null).toList();
 
     if(tourSteps.isNotEmpty) GraphTour.show(context, tourSteps);
@@ -351,15 +353,19 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
               ),
             ),
             functions: functions,
-            summary: Text(_message?? pathText?? ''),
-            options: OptionsPanel(
-              optionsConfig: options,
-              keys: {
-                OptionKind.apply: _publishKey,
-                OptionKind.undo: _undoKey,
-                OptionKind.manual: _manualKey,
-              },
+            summary: Text(
+              _message?? pathText?? '',
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.blue,
+              ),
             ),
+            options: options,
+            optionsKeys: {
+              OptionKind.apply: _publishKey,
+              OptionKind.undo: _undoKey,
+              OptionKind.manual: _manualKey,
+            },
             hint: "Elige origen, destino y objetivo en Funciones",
         ),
     );

@@ -95,7 +95,7 @@ class GraphPainter extends CustomPainter{
           textDirection: TextDirection.ltr,
         );
         label.layout();
-        label.paint(canvas, Offset(loopCenter.dx - label.width / 2, loopCenter.dy + Graph.selfLoopRadius + 4));
+        if (canvasOverlay.showsEdgeWeights) label.paint(canvas, Offset(loopCenter.dx - label.width / 2, loopCenter.dy + Graph.selfLoopRadius + 4));
         return;
       }
 
@@ -139,7 +139,7 @@ class GraphPainter extends CustomPainter{
         textDirection: TextDirection.ltr,
       );
       label.layout();
-      label.paint(canvas, Offset(midX - label.width / 2, midY - label.height / 2));
+      if (canvasOverlay.showsEdgeWeights) label.paint(canvas, Offset(midX - label.width / 2, midY - label.height / 2));
     });
 
     canvasOverlay.paintAfterEdges(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf));

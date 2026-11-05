@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/layout/breakpoints.dart';
 import 'package:graph_maker_app_2/layout/editor_card.dart';
 import 'package:graph_maker_app_2/layout/editor_shell.dart';
+import 'package:graph_maker_app_2/layout/side_column.dart';
 import 'package:graph_maker_app_2/models/app_mode.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
 import 'package:graph_maker_app_2/navigation/go_to_mode.dart';
 import 'package:graph_maker_app_2/widgets/nav/side_nav.dart';
+import 'package:graph_maker_app_2/widgets/panels/options_panel.dart';
 import 'package:graph_maker_app_2/widgets/ui/panel_card.dart';
 
 class WebEditorLayout extends StatefulWidget{
@@ -30,6 +32,7 @@ class _WebEditorLayoutState extends State<WebEditorLayout>{
   @override
   Widget build(BuildContext context){
     AppMode editorMode = widget.editorShell.mode;
+    final double screenHeight = MediaQuery.sizeOf(context).height;
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: Stack(
@@ -56,15 +59,23 @@ class _WebEditorLayoutState extends State<WebEditorLayout>{
               const SizedBox(width: Breakpoints.margin,),
               SizedBox(
                 width: widget.columnWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: widget.editorShell.functions,
-                    ),
-                    const SizedBox(height: Breakpoints.margin,),
-                    widget.editorShell.options,
-                  ],
+                child: SideColumn(
+                  gap: Breakpoints.margin,
+                  summaryCap: screenHeight * 0.3,
+                  optionsCap: screenHeight * 0.3,
+                  minFunctionsHeight: screenHeight * 0.3,
+                  summary: widget.editorShell.summaryOnWeb? PanelCard(
+                      title: "Resumen",
+                      child: widget.editorShell.summary,
+                  ) : null,
+                  functions: PanelCard(
+                      title: "Funciones",
+                      child: widget.editorShell.functions
+                  ),
+                  options: OptionsPanel(
+                      optionsConfig: widget.editorShell.options,
+                      keys: widget.editorShell.optionsKeys,
+                  ),
                 ),
               ),
             ],

@@ -4,15 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../algorithms/kruskal.dart';
+import '../layout/editor_shell.dart';
+import '../layout/options_config.dart';
+import '../models/app_mode.dart';
 import '../providers/graph_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/dialogs/confirm_exit_dialog.dart';
 import '../widgets/dialogs/open_graph_dialog.dart';
 import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
-import '../widgets/menu_option.dart';
 import '../widgets/overlays/highlight_overlay.dart';
+import '../widgets/panels/kruskal_functions.dart';
 import 'kruskal_steps_screen.dart';
+import 'pdf_viewer_screen.dart';
 
 /// Árbol de expansión mínimo (o máximo) con el algoritmo de Kruskal.
 ///
@@ -92,10 +96,7 @@ class _KruskalScreenState extends State<KruskalScreen> {
       _names = names;
       _treeEdgeIds = {for (final e in result.treeEdges) e.id};
     });
-    _showSummary(result);
   }
-
-  String _edgeName(KruskalEdge e) => '${_names[e.source]} - ${_names[e.target]}';
 
   void _openSteps() {
     final result = _result;
@@ -107,71 +108,22 @@ class _KruskalScreenState extends State<KruskalScreen> {
     );
   }
 
-  void _showSummary(KruskalResult result) {
-    final kind = result.goal == KruskalGoal.minimum ? 'minimum' : 'maximum';
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.6,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!result.isConnected)
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(
-                        'The graph is not connected (${result.components} parts), '
-                        'so there is no tree that reaches every node. '
-                        'This is a spanning forest: one tree per part.',
-                        style: TextStyle(color: Theme.of(sheetContext).colorScheme.error),
-                      ),
-                    ),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: result.treeEdges.length,
-                      itemBuilder: (BuildContext context, int i) {
-                        final edge = result.treeEdges[i];
-                        return ListTile(
-                          title: Text(_edgeName(edge)),
-                          trailing: Text(_fmt(edge.weight)),
-                        );
-                      },
-                    ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    title: Text('Total weight ($kind):'),
-                    subtitle: Text(
-                      '${result.treeEdges.length} of ${result.steps.length} edges in the tree',
-                    ),
-                    trailing: Text(_fmt(result.totalWeight)),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        _openSteps();
-                      },
-                      icon: const Icon(Icons.list_alt),
-                      label: const Text('Show steps'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  void _apply(String currentGraph) {
+    widget.mainProvider.replaceGraph(_copy.snapshot());
+    setState(() {
+      _lastAppliedJson = currentGraph;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Grafo actualizado')),
     );
+  }
+
+  String _summaryText(String? message) {
+    final KruskalResult? result = _result;
+    if (message != null) return message;
+    if (result == null) return 'Elige árbol mínimo o máximo';
+    final String kind = result.goal == KruskalGoal.minimum ? 'mínimo' : 'máximo';
+    return 'Árbol $kind: peso ${_fmt(result.totalWeight)}';
   }
 
   @override
@@ -181,22 +133,22 @@ class _KruskalScreenState extends State<KruskalScreen> {
     final List<String> messages = _copy.validateGraph();
     final bool hasChanges = _lastAppliedJson != currentGraph;
     final bool canSolve = _copy.graphGetter().edges.isNotEmpty && messages.isEmpty;
+    final String? message = messages.isNotEmpty ? messages.first : null;
 
-    void handleMenuSelection(BuildContext context, MenuOption option) {
-      switch (option) {
-        case MenuOption.save:
-          showSaveDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.open:
-          showOpenDialog(context, graphProviderCopy);
-          break;
-        case MenuOption.clear:
-          graphProviderCopy.clearGraph();
-          break;
-        default:
-          break;
-      }
-    }
+    final OptionsConfig options = OptionsConfig(
+      onApply: () => _apply(currentGraph),
+      onUndo: graphProviderCopy.undo,
+      onOpen: () => showOpenDialog(context, graphProviderCopy),
+      onSave: () => showSaveDialog(context, graphProviderCopy),
+      onClear: graphProviderCopy.clearGraph,
+      onManual: () => openManual(
+        context,
+        title: 'Manual de Kruskal',
+        assetPath: 'assets/docs/guia_kruskal.pdf',
+      ),
+      hasChanges: hasChanges,
+      canUndo: graphProviderCopy.canUndo,
+    );
 
     return PopScope(
       canPop: !hasChanges,
@@ -204,105 +156,29 @@ class _KruskalScreenState extends State<KruskalScreen> {
         if (didPop) return;
         showConfirmExitDialog(context, _copy);
       }),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Kruskal"),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.publish),
-              tooltip: "Apply to main graph",
-              onPressed: hasChanges
-                  ? () {
-                      widget.mainProvider.replaceGraph(_copy.snapshot());
-                      setState(() {
-                        _lastAppliedJson = currentGraph;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Graph Updated')),
-                      );
-                    }
-                  : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.undo),
-              tooltip: "Undo",
-              onPressed: graphProviderCopy.canUndo ? () => graphProviderCopy.undo() : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.list_alt),
-              tooltip: "Show steps",
-              onPressed: _result != null ? _openSteps : null,
-            ),
-            PopupMenuButton<MenuOption>(
-              onSelected: (option) => handleMenuSelection(context, option),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuOption>>[
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.save,
-                  child: ListTile(
-                    leading: Icon(Icons.save_outlined),
-                    title: Text('Save'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.open,
-                  child: ListTile(
-                    leading: Icon(Icons.folder_open_outlined),
-                    title: Text('Open'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem<MenuOption>(
-                  value: MenuOption.clear,
-                  child: ListTile(
-                    leading: Icon(Icons.delete_sweep_outlined),
-                    title: Text('Clear'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        body: GraphWidget(
+      child: EditorShell(
+        mode: AppMode.kruskal,
+        canvas: GraphWidget(
           canvasOverlay: HighlightOverlay(_treeEdgeIds, AppColors.assignmentEdge),
         ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (messages.isNotEmpty)
-                  Text(
-                    messages.first,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                  ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: canSolve ? () => _solve(KruskalGoal.minimum) : null,
-                        icon: const Icon(Icons.trending_down),
-                        label: const Text('Minimum tree'),
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: canSolve ? () => _solve(KruskalGoal.maximum) : null,
-                        icon: const Icon(Icons.trending_up),
-                        label: const Text('Maximum tree'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        functions: KruskalFunctions(
+          message: message,
+          result: _result,
+          names: _names,
+          canSolve: canSolve,
+          onSolve: _solve,
+          onOpenSteps: _result != null ? _openSteps : null,
+          format: _fmt,
+        ),
+        summary: Text(
+          _summaryText(message),
+          style: TextStyle(
+            fontSize: 15,
+            color: message != null ? Theme.of(context).colorScheme.error : AppColors.blue,
           ),
         ),
+        options: options,
+        hint: 'Dibuja aristas no dirigidas con peso y elige el árbol en Funciones',
       ),
     );
   }

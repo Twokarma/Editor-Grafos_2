@@ -25,6 +25,8 @@ abstract class CanvasOverlay {
     return null;
   }
 
+  bool get showsEdgeWeights => true;
+
   String edgeLabelSuffix(Edge edge){
     return "";
   }

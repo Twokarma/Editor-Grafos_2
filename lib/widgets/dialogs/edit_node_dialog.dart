@@ -8,6 +8,8 @@ Future<void> showEditNodeDialog(BuildContext context, GraphProvider provider, St
   final node = provider.graphGetter().nodes[nodeId]!;
   final controller = TextEditingController(text: node.name);
   int selectedColor = node.color;
+  final bool isValue = provider.rules.nodesAreValues;
+  String? error;
 
   return showDialog(
     context: context,
@@ -15,7 +17,7 @@ Future<void> showEditNodeDialog(BuildContext context, GraphProvider provider, St
       return StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           return AlertDialog(
-            title: const Text("Edit node"),
+            title: Text(isValue ? "Editar nodo" : "Edit node"),
             content: SizedBox(
               width: 320,
               height: 380,
@@ -23,9 +25,9 @@ Future<void> showEditNodeDialog(BuildContext context, GraphProvider provider, St
                 length: 2,
                 child: Column(
                   children: [
-                    const TabBar(
+                    TabBar(
                       tabs: [
-                        Tab(text: "Name"),
+                        Tab(text: isValue ? "Valor" : "Name"),
                         Tab(text: "Color"),
                       ],
                     ),
@@ -37,7 +39,17 @@ Future<void> showEditNodeDialog(BuildContext context, GraphProvider provider, St
                             child: TextField(
                               controller: controller,
                               autofocus: true,
-                              decoration: const InputDecoration(hintText: "Node name"),
+                              keyboardType: isValue
+                                  ? const TextInputType.numberWithOptions(decimal: true, signed: true)
+                                  : null,
+                              onChanged: (_) {
+                                if (error != null) setDialogState(() => error = null);
+                              },
+                              decoration: InputDecoration(
+                                hintText: isValue ? "Ej.: 5 o 3.5" : "Node name",
+                                errorText: error,
+                                errorMaxLines: 3,
+                              ),
                             ),
                           ),
                           SingleChildScrollView(
@@ -63,14 +75,18 @@ Future<void> showEditNodeDialog(BuildContext context, GraphProvider provider, St
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text("Cancel"),
+                child: Text(isValue ? "Cancelar" : "Cancel"),
               ),
               TextButton(
                 onPressed: () {
-                  provider.updateNode(nodeId, newName: controller.text, newColor: selectedColor);
+                  final String? message = provider.updateNode(nodeId, newName: controller.text, newColor: selectedColor);
+                  if (message != null) {
+                    setDialogState(() => error = message);
+                    return;
+                  }
                   Navigator.of(dialogContext).pop();
                 },
-                child: const Text("Save"),
+                child: Text(isValue ? "Guardar" : "Save"),
               ),
             ],
           );
