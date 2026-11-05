@@ -46,6 +46,9 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
   String? _sourceId;
   String? _targetId;
 
+  /// true: camino más largo; false: camino más corto.
+  bool _maximize = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +83,8 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
   String? _validate(int nodeCount, Iterable<dynamic> edges) {
     if (nodeCount < 2) return 'Add at least two nodes.';
     if (edges.isEmpty) return 'Add at least one edge.';
+    // El camino más largo en un grafo sin ciclos admite pesos negativos.
+    if (_maximize) return null;
     for (final e in edges) {
       if ((e.weight as num) < 0) {
         return 'Dijkstra does not support negative weights.';
@@ -108,7 +113,14 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
         ],
         sourceId: _sourceId!,
         targetId: _targetId!,
+        maximize: _maximize,
+        names: names,
       );
+    } on ArgumentError catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${e.message}')),
+      );
+      return;
     } catch (e, st) {
       debugPrint('Dijkstra error: $e\n$st');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -217,6 +229,12 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
           from: sourceValue,
           to: targetValue,
           canSolve: canSolve,
+          maximize: _maximize,
+          onMaximizeChanged: (v) => setState(() {
+            _maximize = v;
+            _result = null;
+            _pathEdgeIds = {};
+          }),
           onFromChanged: (v) => _select(source: v),
           onToChanged: (v) => _select(target: v),
           onSolve: _solve,
