@@ -262,4 +262,26 @@ void main() {
       expect(provider.graphGetter().nodes.values.single.name, '4');
     });
   });
+
+  group('insertAll', () {
+    test('builds a search tree from values inserted one by one', () {
+      final result = BinaryTree.insertAll(null, ['7', '4', '9', '2', '5', '8']);
+      expect(result.isOk, isTrue);
+      expect(BinaryTree.labels(result.root, Traversal.pre), ['7', '4', '2', '5', '9', '8']);
+      expect(BinaryTree.labels(result.root, Traversal.inorder), ['2', '4', '5', '7', '8', '9']);
+    });
+
+    test('adds to an existing tree and sends equal values left', () {
+      final root = BinaryTree.insertAll(null, ['5']).root;
+      final result = BinaryTree.insertAll(root, ['5', '6']);
+      expect(BinaryTree.labels(result.root, Traversal.pre), ['5', '5', '6']);
+      expect(result.root!.left!.label, '5');
+      expect(result.root!.right!.label, '6');
+    });
+
+    test('rejects empty input and non numbers', () {
+      expect(BinaryTree.insertAll(null, []).isOk, isFalse);
+      expect(BinaryTree.insertAll(null, ['3', 'x']).error, contains('"x"'));
+    });
+  });
 }
