@@ -7,6 +7,9 @@ import 'package:graph_maker_app_2/rules/graph_rules.dart';
 /// aristas dirigidas ni lazos; las aristas repetidas ya las rechaza GraphRules.
 class KruskalRules extends GraphRules {
   @override
+  bool forcesUndirected() => true;
+
+  @override
   String? checkEdgeEndpoints(Graph graph, String fromId, String toId) {
     final message = super.checkEdgeEndpoints(graph, fromId, toId);
     if (message != null) return message;

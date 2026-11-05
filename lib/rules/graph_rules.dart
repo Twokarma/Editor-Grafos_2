@@ -7,6 +7,8 @@ abstract class GraphRules {
 
   bool forcesDirected() => false;
 
+  bool forcesUndirected() => false;
+
   bool get nodesAreValues => false;
 
   double? get autoEdgeWeight => null;
