@@ -6,8 +6,10 @@ import 'package:graph_maker_app_2/widgets/ui/pill_button.dart';
 class OptionsPanel extends StatelessWidget{
   final OptionsConfig optionsConfig;
   final Map<OptionKind, GlobalKey> keys;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
-  const OptionsPanel({super.key, required this.optionsConfig, this.keys = const <OptionKind, GlobalKey>{}});
+  const OptionsPanel({super.key, required this.optionsConfig, this.keys = const <OptionKind, GlobalKey>{}, this.expanded = true, this.onToggle});
 
   Widget _buildOptions(List<OptionItem> options){
     final List<Widget> buttons = [];
@@ -49,6 +51,8 @@ class OptionsPanel extends StatelessWidget{
     final List<OptionItem> options = optionsConfig.visibleOptions();
     return options.isNotEmpty? PanelCard(
         title: "Opciones",
+        expanded: expanded,
+        onToggle: onToggle,
         child: _buildOptions(options),
     ) : const SizedBox.shrink();
   }

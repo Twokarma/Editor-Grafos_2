@@ -19,6 +19,11 @@ class DijkstraFunctions extends StatelessWidget {
   final VoidCallback onSolve;
   final VoidCallback? onOpenSteps;
   final String Function(double) format;
+  final GlobalKey? fromKey;
+  final GlobalKey? toKey;
+  final GlobalKey? objectiveKey;
+  final GlobalKey? solveKey;
+  final GlobalKey? stepsKey;
 
   const DijkstraFunctions({
     super.key,
@@ -36,6 +41,11 @@ class DijkstraFunctions extends StatelessWidget {
     required this.onSolve,
     required this.onOpenSteps,
     required this.format,
+    this.fromKey,
+    this.toKey,
+    this.objectiveKey,
+    this.solveKey,
+    this.stepsKey,
   });
 
   Widget _nodeDropDown(String label, String? value, ValueChanged<String?> onSelected) {
@@ -129,22 +139,23 @@ class DijkstraFunctions extends StatelessWidget {
           return constraints.maxWidth >= 300
               ? Row(
                   children: [
-                    Expanded(child: _nodeDropDown('Desde', from, onFromChanged)),
+                    Expanded(child: KeyedSubtree(key: fromKey, child: _nodeDropDown('Desde', from, onFromChanged))),
                     const SizedBox(width: 8),
-                    Expanded(child: _nodeDropDown('Hacia', to, onToChanged)),
+                    Expanded(child: KeyedSubtree(key: toKey, child: _nodeDropDown('Hacia', to, onToChanged))),
                   ],
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _nodeDropDown('Desde', from, onFromChanged),
+                    KeyedSubtree(key: fromKey, child: _nodeDropDown('Desde', from, onFromChanged)),
                     const SizedBox(height: 16),
-                    _nodeDropDown('Hacia', to, onToChanged),
+                    KeyedSubtree(key: toKey, child: _nodeDropDown('Hacia', to, onToChanged)),
                   ],
                 );
         }),
         const SizedBox(height: 16),
         SegmentedButton<bool>(
+          key: objectiveKey,
           showSelectedIcon: false,
           segments: const [
             ButtonSegment<bool>(value: false, label: Text('Minimizar'), icon: Icon(Icons.south)),
@@ -170,6 +181,7 @@ class DijkstraFunctions extends StatelessWidget {
           ),
         const SizedBox(height: 16),
         PillButton(
+          key: solveKey,
           label: maximize ? 'Camino más largo' : 'Camino más corto',
           icon: Icons.alt_route,
           style: AppButtonStyle.accent,
@@ -178,6 +190,7 @@ class DijkstraFunctions extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PillButton(
+          key: stepsKey,
           label: 'Ver pasos',
           icon: Icons.list_alt,
           style: AppButtonStyle.outline,

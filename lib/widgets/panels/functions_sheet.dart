@@ -6,17 +6,27 @@ import '../ui/circle_icon_button.dart';
 class FunctionsSheet extends StatefulWidget{
   final Widget summary;
   final Widget functions;
+  final bool? open;
+  final VoidCallback? onToggle;
 
-  const FunctionsSheet({super.key, required this.summary, required this.functions});
+  const FunctionsSheet({super.key, required this.summary, required this.functions, this.open, this.onToggle});
 
   @override
   State<FunctionsSheet> createState () => _FunctionsSheetState();
 }
 
 class _FunctionsSheetState extends State<FunctionsSheet>{
-  bool _open = true;
+  bool _ownOpen = true;
 
-  void _toggle() => setState(() => _open = !_open);
+  bool get _open => widget.open ?? _ownOpen;
+
+  void _toggle(){
+    if(widget.onToggle != null){
+      widget.onToggle!();
+    } else {
+      setState(() => _ownOpen = !_ownOpen);
+    }
+  }
 
   @override
   Widget build(BuildContext context){

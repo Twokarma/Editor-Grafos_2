@@ -4,46 +4,58 @@ import 'package:graph_maker_app_2/widgets/dialogs/save_graph_dialog.dart';
 
 enum ExitOption {save, dontSave, cancel}
 
-Future<void> showConfirmExitDialog(
-    BuildContext context,
-    GraphProvider copy
-    ) async {
+Future<bool> confirmLeaveGraph(BuildContext context, GraphProvider provider) async {
+  if(!provider.hasUnsavedChanges) return true;
+
   final ExitOption? option = await showDialog<ExitOption>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text("Unsaved graph"),
-          content: const Text("Save graph?"),
+          title: const Text("Grafo sin guardar"),
+          content: const Text("¿Quieres guardar el grafo antes de salir?"),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(ExitOption.save),
-              child: const Text("Save"),
+              onPressed: () => Navigator.of(dialogContext).pop(ExitOption.cancel),
+              child: const Text("Cancelar"),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(ExitOption.dontSave),
-              child: const Text("Don't save"),
+              child: const Text("No guardar"),
             ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(ExitOption.cancel),
-              child: const Text("Cancel"),
+              onPressed: () => Navigator.of(dialogContext).pop(ExitOption.save),
+              child: const Text("Guardar"),
             ),
           ],
         );
       }
   );
 
-  if(option == null || !context.mounted) return;
+  if(option == null || !context.mounted) return false;
 
-  switch(option){
-    case ExitOption.dontSave :
-      Navigator.of(context).pop();
-      break;
-    case ExitOption.save :
-      if(await showSaveDialog(context, copy)) {
-        Navigator.of(context).pop();
-      }
-      break;
-    case ExitOption.cancel :
-      break;
+  return switch(option){
+    ExitOption.dontSave => true,
+    ExitOption.save => await showSaveDialog(context, provider),
+    ExitOption.cancel => false,
+  };
+}
+
+class UnsavedGraphScope extends StatelessWidget{
+  final GraphProvider provider;
+  final Widget child;
+
+  const UnsavedGraphScope({super.key, required this.provider, required this.child});
+
+  @override
+  Widget build(BuildContext context){
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if(didPop) return;
+        final NavigatorState navigator = Navigator.of(context);
+        if(await confirmLeaveGraph(context, provider)) navigator.pop();
+      },
+      child: child,
+    );
   }
 }

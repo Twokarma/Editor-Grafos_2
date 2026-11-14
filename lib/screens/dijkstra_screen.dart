@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +13,7 @@ import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
 import '../widgets/overlays/highlight_overlay.dart';
 import '../widgets/panels/dijkstra_functions.dart';
+import '../tours/graph_tours.dart';
 import 'dijkstra_steps_screen.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -24,20 +23,17 @@ import 'pdf_viewer_screen.dart';
 /// origen y destino, y el camino queda resaltado sobre el grafo. Las aristas
 /// no dirigidas se recorren en ambos sentidos; las dirigidas, solo de origen
 /// a destino.
-///
-/// Igual que KruskalScreen, trabaja sobre una COPIA del grafo (el provider que
-/// recibe de _pushWithCopy).
 class DijkstraScreen extends StatefulWidget {
-  final GraphProvider mainProvider;
-  const DijkstraScreen({super.key, required this.mainProvider});
+  const DijkstraScreen({super.key});
 
   @override
   State<DijkstraScreen> createState() => _DijkstraScreenState();
 }
 
 class _DijkstraScreenState extends State<DijkstraScreen> {
-  late final GraphProvider _copy;
-  late String _lastAppliedJson;
+  final DijkstraTourKeys _tourKeys = DijkstraTourKeys();
+
+  late final GraphProvider _provider;
 
   DijkstraResult? _result;
   Map<String, String> _names = const {};
@@ -52,14 +48,13 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
   @override
   void initState() {
     super.initState();
-    _copy = context.read<GraphProvider>();
-    _copy.addListener(_clearResult);
-    _lastAppliedJson = jsonEncode(_copy.graphGetter().toJson());
+    _provider = context.read<GraphProvider>();
+    _provider.addListener(_clearResult);
   }
 
   @override
   void dispose() {
-    _copy.removeListener(_clearResult);
+    _provider.removeListener(_clearResult);
     super.dispose();
   }
 
@@ -94,7 +89,7 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
   }
 
   void _solve() {
-    final graph = _copy.graphGetter();
+    final graph = _provider.graphGetter();
     final names = {for (final n in graph.nodes.values) n.id: n.name};
 
     final DijkstraResult result;
@@ -154,16 +149,6 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
     );
   }
 
-  void _apply(String currentGraph) {
-    widget.mainProvider.replaceGraph(_copy.snapshot());
-    setState(() {
-      _lastAppliedJson = currentGraph;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Grafo actualizado')),
-    );
-  }
-
   void _select({String? source, String? target}) {
     setState(() {
       if (source != null) _sourceId = source;
@@ -183,11 +168,9 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final graphProviderCopy = context.watch<GraphProvider>();
-    final graph = _copy.graphGetter();
-    final String currentGraph = jsonEncode(graph.toJson());
+    final graphProvider = context.watch<GraphProvider>();
+    final graph = _provider.graphGetter();
     final String? error = _validate(graph.nodes.length, graph.edges.values);
-    final bool hasChanges = _lastAppliedJson != currentGraph;
 
     final nodes = {for (final n in graph.nodes.values) n.id: n.name};
     // Si se borró un nodo elegido, se descarta la selección.
@@ -198,22 +181,18 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
         error == null && sourceValue != null && targetValue != null;
 
     final OptionsConfig options = OptionsConfig(
-      onApply: () => _apply(currentGraph),
-      onUndo: graphProviderCopy.undo,
-      onOpen: () => showOpenDialog(context, graphProviderCopy),
-      onSave: () => showSaveDialog(context, graphProviderCopy),
-      onClear: graphProviderCopy.clearGraph,
+      onUndo: graphProvider.undo,
+      onRedo: graphProvider.redo,
+      onOpen: () => showOpenDialog(context, graphProvider),
+      onSave: () => showSaveDialog(context, graphProvider),
+      onClear: graphProvider.clearGraph,
       onManual: _openManual,
-      hasChanges: hasChanges,
-      canUndo: graphProviderCopy.canUndo,
+      canUndo: graphProvider.canUndo,
+      canRedo: graphProvider.canRedo,
     );
 
-    return PopScope(
-      canPop: !hasChanges,
-      onPopInvokedWithResult: ((didPop, _) {
-        if (didPop) return;
-        showConfirmExitDialog(context, _copy);
-      }),
+    return UnsavedGraphScope(
+      provider: _provider,
       child: EditorShell(
         mode: AppMode.dijkstra,
         // Sin allowDirected: false, el diálogo de arista ofrece
@@ -240,6 +219,11 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
           onSolve: _solve,
           onOpenSteps: _result != null ? _openSteps : null,
           format: _fmt,
+          fromKey: _tourKeys.from,
+          toKey: _tourKeys.to,
+          objectiveKey: _tourKeys.objective,
+          solveKey: _tourKeys.solve,
+          stepsKey: _tourKeys.steps,
         ),
         summary: Text(
           _summaryText(error),
@@ -249,6 +233,7 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
           ),
         ),
         options: options,
+        tour: dijkstraTour(_tourKeys),
         hint: 'Elige origen y destino en Funciones',
       ),
     );

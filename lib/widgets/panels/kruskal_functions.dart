@@ -12,6 +12,9 @@ class KruskalFunctions extends StatelessWidget {
   final ValueChanged<KruskalGoal> onSolve;
   final VoidCallback? onOpenSteps;
   final String Function(double) format;
+  final GlobalKey? minKey;
+  final GlobalKey? maxKey;
+  final GlobalKey? stepsKey;
 
   const KruskalFunctions({
     super.key,
@@ -22,6 +25,9 @@ class KruskalFunctions extends StatelessWidget {
     required this.onSolve,
     required this.onOpenSteps,
     required this.format,
+    this.minKey,
+    this.maxKey,
+    this.stepsKey,
   });
 
   Widget _resultView(BuildContext context, KruskalResult result) {
@@ -73,6 +79,7 @@ class KruskalFunctions extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PillButton(
+          key: minKey,
           label: 'Árbol mínimo',
           icon: Icons.trending_down,
           style: current?.goal == KruskalGoal.minimum ? AppButtonStyle.accent : AppButtonStyle.outline,
@@ -81,6 +88,7 @@ class KruskalFunctions extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PillButton(
+          key: maxKey,
           label: 'Árbol máximo',
           icon: Icons.trending_up,
           style: current?.goal == KruskalGoal.maximum ? AppButtonStyle.accent : AppButtonStyle.outline,
@@ -89,6 +97,7 @@ class KruskalFunctions extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         PillButton(
+          key: stepsKey,
           label: 'Ver pasos',
           icon: Icons.list_alt,
           style: AppButtonStyle.outline,

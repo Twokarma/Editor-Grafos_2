@@ -11,7 +11,7 @@ OptionItem itemOf(OptionsConfig c, OptionKind kind) =>
 /// Todas las opciones, como en Johnson.
 const everything = OptionsConfig(
   onUndo: noop, onRedo: noop, onSave: noop, onOpen: noop, onClear: noop,
-  onApply: noop, onManual: noop, onHelp: noop, offersChat: true,
+  onManual: noop, onHelp: noop, offersChat: true,
 );
 
 void main() {
@@ -29,7 +29,7 @@ void main() {
       expect(kindsOf(const OptionsConfig(onHelp: noop, offersChat: true)), contains(OptionKind.aiChat));
     });
 
-    test('con todo, aparecen las nueve opciones', () {
+    test('con todo, aparecen las ocho opciones', () {
       expect(everything.visibleOptions(), hasLength(OptionKind.values.length));
     });
 
@@ -77,14 +77,8 @@ void main() {
       expect(itemOf(c, OptionKind.redo).action, isNull);
     });
 
-    test('sin cambios: Aplicar aparece pero deshabilitado', () {
-      const c = OptionsConfig(onApply: noop, hasChanges: false);
-      expect(kindsOf(c), [OptionKind.apply]);
-      expect(itemOf(c, OptionKind.apply).action, isNull);
-    });
-
     test('los avisos solo afectan a su propia opción', () {
-      const c = OptionsConfig(onUndo: noop, onSave: noop, canUndo: false, canRedo: false, hasChanges: false);
+      const c = OptionsConfig(onUndo: noop, onSave: noop, canUndo: false, canRedo: false);
       expect(itemOf(c, OptionKind.undo).action, isNull);
       expect(itemOf(c, OptionKind.save).action, isNotNull);
     });

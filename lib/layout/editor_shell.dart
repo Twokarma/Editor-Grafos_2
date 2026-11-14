@@ -4,6 +4,7 @@ import 'package:graph_maker_app_2/layout/mobile_editor_layout.dart';
 import 'package:graph_maker_app_2/layout/options_config.dart';
 import 'package:graph_maker_app_2/layout/web_editor_layout.dart';
 import 'package:graph_maker_app_2/models/app_mode.dart';
+import 'package:graph_maker_app_2/widgets/tour/tour_models.dart';
 
 class EditorShell extends StatelessWidget{
     final AppMode mode;
@@ -14,7 +15,7 @@ class EditorShell extends StatelessWidget{
     final Widget summary;
     final bool summaryOnWeb;
     final OptionsConfig options;
-    final Map<OptionKind, GlobalKey> optionsKeys;
+    final EditorTour? tour;
 
     const EditorShell ({
         super.key,
@@ -25,7 +26,7 @@ class EditorShell extends StatelessWidget{
         required this.summary,
         this.summaryOnWeb = false,
         required this.options,
-        this.optionsKeys = const <OptionKind, GlobalKey>{}
+        this.tour,
     });
 
     @override

@@ -4,11 +4,10 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:graph_maker_app_2/models/app_mode.dart';
-import 'package:graph_maker_app_2/providers/graph_provider.dart';
+import 'package:graph_maker_app_2/navigation/go_to_mode.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
 
 class _Palette {
@@ -46,17 +45,7 @@ TextStyle _mono({double? size, Color color = _Palette.ink}) =>
 double _fluid(double width, double factor, double min, double max) => (width * factor).clamp(min, max);
 
 void _openMode(BuildContext context, AppMode mode) {
-  final GraphProvider main = context.read<GraphProvider>();
-  if (mode.usesCopy) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ChangeNotifierProvider<GraphProvider>(
-        create: (_) => GraphProvider(initialGraph: main.snapshot(), graphRules: mode.rules),
-        child: mode.buildScreen(main),
-      ),
-    ));
-  } else {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => mode.buildScreen(main)));
-  }
+  Navigator.of(context).push(modeRoute(mode));
 }
 
 Future<void> _openLink(String url) async {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
-import 'package:graph_maker_app_2/widgets/canvas/dot_grid_painter.dart';
 
 class EditorCard extends StatelessWidget{
   final String title;
@@ -52,15 +51,7 @@ class EditorCard extends StatelessWidget{
           Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadiusGeometry.circular(16),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    RepaintBoundary(
-                      child: CustomPaint(painter: DotGridPainter(),),
-                    ),
-                    child,
-                  ],
-                ),
+                child: child,
               ),
           ),
         ],

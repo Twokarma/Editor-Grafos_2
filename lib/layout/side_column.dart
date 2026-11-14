@@ -9,6 +9,7 @@ class SideColumn extends MultiChildRenderObjectWidget {
   final double optionsCap;
   final double minFunctionsHeight;
   final bool hasSummary;
+  final bool functionsExpanded;
 
   SideColumn({
     super.key,
@@ -19,6 +20,7 @@ class SideColumn extends MultiChildRenderObjectWidget {
     required this.summaryCap,
     required this.optionsCap,
     required this.minFunctionsHeight,
+    this.functionsExpanded = true,
   })  : hasSummary = summary != null,
         super(children: [?summary, functions, options]);
 
@@ -29,6 +31,7 @@ class SideColumn extends MultiChildRenderObjectWidget {
         optionsCap: optionsCap,
         minFunctionsHeight: minFunctionsHeight,
         hasSummary: hasSummary,
+        functionsExpanded: functionsExpanded,
       );
 
   @override
@@ -38,7 +41,8 @@ class SideColumn extends MultiChildRenderObjectWidget {
       ..summaryCap = summaryCap
       ..optionsCap = optionsCap
       ..minFunctionsHeight = minFunctionsHeight
-      ..hasSummary = hasSummary;
+      ..hasSummary = hasSummary
+      ..functionsExpanded = functionsExpanded;
   }
 }
 
@@ -54,6 +58,7 @@ class RenderSideColumn extends RenderBox
     required this._optionsCap,
     required this._minFunctionsHeight,
     required this._hasSummary,
+    required this._functionsExpanded,
   });
 
   double _gap;
@@ -91,6 +96,13 @@ class RenderSideColumn extends RenderBox
     markNeedsLayout();
   }
 
+  bool _functionsExpanded;
+  set functionsExpanded(bool v) {
+    if (v == _functionsExpanded) return;
+    _functionsExpanded = v;
+    markNeedsLayout();
+  }
+
   @override
   void setupParentData(RenderBox child) {
     if (child.parentData is! _SideColumnParentData) child.parentData = _SideColumnParentData();
@@ -114,20 +126,24 @@ class RenderSideColumn extends RenderBox
       summaryHeight = summary.size.height + _gap;
     }
 
-    final double natural = options.getMaxIntrinsicHeight(width);
-    final double roomForFunctions = height - summaryHeight - _gap - natural;
-    final double optionsMax = roomForFunctions < _minFunctionsHeight ? min(natural, _optionsCap) : natural;
-    options.layout(
-      BoxConstraints(
-        minWidth: width,
-        maxWidth: width,
-        maxHeight: max(0.0, min(optionsMax, height - summaryHeight - _gap)),
-      ),
-      parentUsesSize: true,
-    );
-
-    final double functionsHeight = max(0.0, height - summaryHeight - _gap - options.size.height);
-    functions.layout(BoxConstraints.tightFor(width: width, height: functionsHeight), parentUsesSize: true);
+    final double available = max(0.0, height - summaryHeight - _gap);
+    if (_functionsExpanded) {
+      final double natural = options.getMaxIntrinsicHeight(width);
+      final double roomForFunctions = available - natural;
+      final double optionsMax = roomForFunctions < _minFunctionsHeight ? min(natural, _optionsCap) : natural;
+      options.layout(
+        BoxConstraints(minWidth: width, maxWidth: width, maxHeight: min(optionsMax, available)),
+        parentUsesSize: true,
+      );
+      final double functionsHeight = max(0.0, available - options.size.height);
+      functions.layout(BoxConstraints.tightFor(width: width, height: functionsHeight), parentUsesSize: true);
+    } else {
+      functions.layout(BoxConstraints(minWidth: width, maxWidth: width, maxHeight: available), parentUsesSize: true);
+      options.layout(
+        BoxConstraints(minWidth: width, maxWidth: width, maxHeight: max(0.0, available - functions.size.height)),
+        parentUsesSize: true,
+      );
+    }
 
     if (summary != null) (summary.parentData! as _SideColumnParentData).offset = Offset.zero;
     (functions.parentData! as _SideColumnParentData).offset = Offset(0, summaryHeight);

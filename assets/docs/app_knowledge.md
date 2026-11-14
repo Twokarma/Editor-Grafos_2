@@ -13,7 +13,7 @@ Tap an empty spot on the canvas. New nodes are named automatically: A, B, C ... 
 Tap a node. The "Edit node" window has two tabs: **Name** (type a new name) and **Color** (pick a color). Press **Save** to apply or **Cancel** to discard.
 
 ### Move a node
-Press and hold a node for about half a second (the phone gives a small vibration), then drag it and release. A node cannot be dropped too close to another node; the app shows "Can't move a node that close to another" and the node stays where it was.
+Press and hold a node for about half a second (the phone gives a small vibration), then drag it and release. A node cannot be dropped too close to another node; the app shows "Can't move a node that close to another" and the node stays where it was. Touching the screen with a second finger while moving a node cancels the move and the node goes back to where it was.
 
 ### Create an edge
 Press a node, drag to another node and release on it. A "Set weight" window opens:
@@ -22,6 +22,8 @@ Press a node, drag to another node and release on it. A "Set weight" window open
 - Press **Save** to create the edge or **Cancel** to abort.
 
 To create a self-loop (an edge from a node to itself), drag from a node and release on the same node. The loop is drawn as a small ring next to the node.
+
+Dragging that starts on a node always creates an edge. To move around the canvas instead, start the drag on an empty spot or use two fingers. A second finger during an edge drag cancels the edge.
 
 Rules about edges:
 - Only one edge is allowed for the same source and target. If it already exists, the app says "An edge already exists between these nodes".
@@ -43,6 +45,15 @@ The save icon in the top bar asks for a name and stores the graph on the phone. 
 
 ### Open a graph
 The folder icon in the top bar lists your saved graphs. Tap a name to load it (this replaces the graph on screen and can be undone). Tap the trash icon next to a name to delete that saved graph permanently. Deleting a saved graph does not change the graph currently on screen.
+
+## Moving around the canvas
+The canvas has no edges: you can move it in any direction and zoom in or out (from 30% to 300%).
+- **Phone or tablet:** drag one finger on an empty spot, or drag with two fingers, to move the canvas. Pinch to zoom; the point between your fingers stays under them.
+- **Computer:** scroll with the mouse wheel or two fingers on the trackpad to move the canvas. Hold **Ctrl** (or **Cmd** on Mac) while scrolling, or pinch on the trackpad, to zoom toward the cursor. You can also hold **Space** and drag, or drag with the middle mouse button, to move the canvas.
+- **Zoom controls:** a small white bar on the canvas has **−** and **+** to zoom, the current zoom percentage (tap it to go back to 100%) and a **fit** button that frames the whole graph. On phones it sits on the right edge; on computers, in the bottom-right corner of the canvas.
+- **Keyboard (computer):** **+** and **−** zoom, **0** returns to 100%, **F** fits the whole graph, **Ctrl+Z** undoes, **Ctrl+Shift+Z** or **Ctrl+Y** redoes. Click the canvas first so it receives the keys.
+- Opening a saved graph, building or generating a tree in Árboles, and clearing the graph move the view automatically so the result is visible. Undo, redo and normal edits never move the view.
+- The view (zoom and position) is not part of undo and is not saved with the graph. Each screen starts at 100%.
 
 ## How the graph is drawn
 - The number next to an edge is its weight.

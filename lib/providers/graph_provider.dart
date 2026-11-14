@@ -14,9 +14,17 @@ class GraphProvider extends ChangeNotifier{
   final GraphStorageService _storage = GraphStorageService();
   static const int _maxHistory = 20;
   final List<Graph> _history = [];
+  final List<Graph> _future = [];
   final GraphRules rules;
+  late String _savedJson;
 
-  GraphProvider({Graph? initialGraph, GraphRules? graphRules}) : _graph = initialGraph?? Graph(), rules = graphRules?? DefaultRules();
+  GraphProvider({Graph? initialGraph, GraphRules? graphRules}) : _graph = initialGraph?? Graph(), rules = graphRules?? DefaultRules() {
+    _savedJson = _currentJson;
+  }
+
+  String get _currentJson => jsonEncode(_graph.toJson());
+
+  bool get hasUnsavedChanges => _graph.nodes.isNotEmpty && _currentJson != _savedJson;
 
   Graph graphGetter(){
     return _graph;
@@ -26,9 +34,14 @@ class GraphProvider extends ChangeNotifier{
     return _graph.clone();
   }
 
+  int _layoutVersion = 0;
+
+  int get layoutVersion => _layoutVersion;
+
   void replaceGraph(Graph newGraph){
     _pushHistory();
     _graph = newGraph.clone();
+    _layoutVersion++;
     notifyListeners();
   }
 
@@ -106,8 +119,8 @@ class GraphProvider extends ChangeNotifier{
     notifyListeners();
   }
 
-  String findEdgeAt(double x, double y) {
-      return _graph.findEdgeAt(x, y);
+  String findEdgeAt(double x, double y, {double tolerance = 10}) {
+      return _graph.findEdgeAt(x, y, tolerance: tolerance);
   }
 
   Edge? findReverseEdge(String sourceNode, String targetNode){
@@ -143,8 +156,8 @@ class GraphProvider extends ChangeNotifier{
     return null;
   }
 
-  String findNodeAt(double x, double y) {
-    return _graph.findNodeAt(x, y);
+  String findNodeAt(double x, double y, {double minRadius = 0}) {
+    return _graph.findNodeAt(x, y, minRadius: minRadius);
   }
 
   bool edgeExists(String sourceNode, String tap) {
@@ -154,21 +167,37 @@ class GraphProvider extends ChangeNotifier{
   void clearGraph(){
     _pushHistory();
     _graph.clear();
+    _layoutVersion++;
     notifyListeners();
   }
 
    bool get canUndo => _history.isNotEmpty;
 
-   void _pushHistory(){
-      _history.add(_graph.clone());
-      if (_history.length > _maxHistory) {
-        _history.removeAt(0);
+   bool get canRedo => _future.isNotEmpty;
+
+   void _push(List<Graph> stack, Graph graph){
+      stack.add(graph);
+      if (stack.length > _maxHistory) {
+        stack.removeAt(0);
       }
+   }
+
+   void _pushHistory(){
+      _push(_history, _graph.clone());
+      _future.clear();
    }
 
    void undo(){
      if (_history.isEmpty) return;
+     _push(_future, _graph);
      _graph = _history.removeLast();
+     notifyListeners();
+   }
+
+   void redo(){
+     if (_future.isEmpty) return;
+     _push(_history, _graph);
+     _graph = _future.removeLast();
      notifyListeners();
    }
 
@@ -178,6 +207,7 @@ class GraphProvider extends ChangeNotifier{
 
   Future<void> saveGraph(String name) async {
    await _storage.save(name, _graph.toJson());
+   _savedJson = _currentJson;
   }
 
   Future<String?> loadGraph(String name) async{
@@ -188,6 +218,8 @@ class GraphProvider extends ChangeNotifier{
     if(messages.isNotEmpty) return messages.first;
     _pushHistory();
     _graph = newGraph;
+    _savedJson = _currentJson;
+    _layoutVersion++;
     notifyListeners();
     return null;
   }

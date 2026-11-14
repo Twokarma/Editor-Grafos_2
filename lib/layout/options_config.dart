@@ -7,7 +7,6 @@ enum OptionKind{
   save('Guardar', Icons.save_outlined, AppButtonStyle.outline, OptionGroup.graph),
   open('Abrir', Icons.folder_open_outlined, AppButtonStyle.outline, OptionGroup.graph),
   clear('Limpiar', Icons.delete_sweep_outlined, AppButtonStyle.outline, OptionGroup.graph),
-  apply('Aplicar', Icons.publish, AppButtonStyle.outline, OptionGroup.graph),
   manual('Manual', Icons.menu_book_outlined, AppButtonStyle.outline, OptionGroup.graph),
   help('Ayuda', Icons.help_outline, AppButtonStyle.outline, OptionGroup.graph),
   aiChat('ChatIA', Icons.chat_bubble_outline, AppButtonStyle.dark, OptionGroup.graph);
@@ -28,18 +27,22 @@ class OptionsConfig {
   final VoidCallback? onSave;
   final VoidCallback? onOpen;
   final VoidCallback? onClear;
-  final VoidCallback? onApply;
   final VoidCallback? onManual;
   final VoidCallback? onHelp;
+  final VoidCallback? onChat;
 
   final bool canUndo;
   final bool canRedo;
-  final bool hasChanges;
 
   final bool offersChat;
 
-  const OptionsConfig({this.onUndo, this.onRedo, this.onSave, this.onOpen, this.onClear, this.onApply, this.onManual, this.onHelp,
-    this.canUndo = true, this.canRedo = true, this.hasChanges = true, this.offersChat = false});
+  const OptionsConfig({this.onUndo, this.onRedo, this.onSave, this.onOpen, this.onClear, this.onManual, this.onHelp, this.onChat,
+    this.canUndo = true, this.canRedo = true, this.offersChat = false});
+
+  OptionsConfig withHelp(VoidCallback help) => OptionsConfig(
+    onUndo: onUndo, onRedo: onRedo, onSave: onSave, onOpen: onOpen, onClear: onClear, onManual: onManual,
+    onHelp: help, onChat: onChat, canUndo: canUndo, canRedo: canRedo, offersChat: offersChat,
+  );
 
   VoidCallback? actionFor(OptionKind kind) => switch(kind){
     OptionKind.undo => onUndo,
@@ -47,18 +50,16 @@ class OptionsConfig {
     OptionKind.save => onSave,
     OptionKind.open => onOpen,
     OptionKind.clear => onClear,
-    OptionKind.apply => onApply,
     OptionKind.manual => onManual,
     OptionKind.help => onHelp,
-    OptionKind.aiChat => null,
+    OptionKind.aiChat => onChat,
   };
 
-  bool isOffered(OptionKind kind) => kind == OptionKind.aiChat ? offersChat : actionFor(kind) != null;
+  bool isOffered(OptionKind kind) => kind == OptionKind.aiChat ? offersChat || onChat != null : actionFor(kind) != null;
 
   bool isAvailable(OptionKind kind) => switch(kind){
     OptionKind.undo => canUndo,
     OptionKind.redo => canRedo,
-    OptionKind.apply => hasChanges,
     _ => true,
   };
 

@@ -429,7 +429,20 @@ class BinaryTree {
     return max(1, (usable / (2 * minRadius + _gap)).floor() + 1);
   }
 
-  static Graph toGraph(TreeNode root, Size area, {double top = 24, double bottom = 24}) {
+  static const double _layoutColumn = 76;
+  static const double _layoutLevel = 90;
+  static const double _layoutPadding = 24;
+
+  static Size layoutArea(TreeNode root) {
+    final int n = count(root);
+    final int levels = depth(root);
+    return Size(
+      2 * (maxRadius + _sideMargin) + max(0, n - 1) * _layoutColumn,
+      2 * _layoutPadding + 2 * maxRadius + levels * _layoutLevel,
+    );
+  }
+
+  static Graph toGraph(TreeNode root, Size area, {double top = _layoutPadding, double bottom = _layoutPadding}) {
     final List<TreeNode> inorder = traverse(root, Traversal.inorder);
     final int n = inorder.length;
     final int treeDepth = depth(root);

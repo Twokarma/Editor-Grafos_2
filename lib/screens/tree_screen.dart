@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:graph_maker_app_2/algorithms/binary_tree.dart';
 import 'package:graph_maker_app_2/layout/breakpoints.dart';
@@ -13,24 +11,21 @@ import 'package:graph_maker_app_2/widgets/dialogs/confirm_exit_dialog.dart';
 import 'package:graph_maker_app_2/widgets/dialogs/open_graph_dialog.dart';
 import 'package:graph_maker_app_2/widgets/dialogs/save_graph_dialog.dart';
 import 'package:graph_maker_app_2/widgets/graph_canvas.dart';
-import 'package:graph_maker_app_2/widgets/graph_tour.dart';
+import 'package:graph_maker_app_2/tours/tree_sort_tours.dart';
 import 'package:graph_maker_app_2/widgets/overlays/tree_overlay.dart';
 import 'package:graph_maker_app_2/widgets/panels/tree_functions.dart';
 import 'package:graph_maker_app_2/screens/pdf_viewer_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 class TreeScreen extends StatefulWidget {
-  final GraphProvider mainProvider;
-  const TreeScreen({super.key, required this.mainProvider});
+  const TreeScreen({super.key});
 
   @override
   State<TreeScreen> createState() => _TreeScreenState();
 }
 
 class _TreeScreenState extends State<TreeScreen> {
-  late final GraphProvider _copy;
-  late String _lastAppliedJson;
+  late final GraphProvider _provider;
 
   TreePair _pair = TreePair.postIn;
   final TextEditingController _postController = TextEditingController();
@@ -45,18 +40,12 @@ class _TreeScreenState extends State<TreeScreen> {
 
   Traversal? _selectedTraversal;
 
-  Size _canvasSize = const Size(600, 400);
-
   final TreeTourKeys _tourKeys = TreeTourKeys();
-  final GlobalKey _publishKey = GlobalKey();
-  final GlobalKey _undoKey = GlobalKey();
-  final GlobalKey _manualKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _copy = context.read<GraphProvider>();
-    _lastAppliedJson = jsonEncode(_copy.graphGetter().toJson());
+    _provider = context.read<GraphProvider>();
     _postController.addListener(_onFieldsChanged);
     _otherController.addListener(_onFieldsChanged);
     _insertController.addListener(_onInsertChanged);
@@ -81,19 +70,9 @@ class _TreeScreenState extends State<TreeScreen> {
 
   bool get _isMobile => MediaQuery.sizeOf(context).width < Breakpoints.mobileUntil;
 
-  ({double top, double bottom}) get _canvasPadding => _isMobile
-      ? (top: 96, bottom: MediaQuery.sizeOf(context).height / 2 + 40)
-      : (top: 24, bottom: 24);
-
-  int get _maxNodes => BinaryTree.maxNodesFor(_canvasSize.width).clamp(1, BinaryTree.maxRandomNodes);
-
   void _drawTree(TreeNode root) {
-    final padding = _canvasPadding;
-    final Graph graph = BinaryTree.toGraph(root, _canvasSize, top: padding.top, bottom: padding.bottom);
-    _copy.replaceGraph(graph);
-    if (BinaryTree.count(root) > BinaryTree.maxNodesFor(_canvasSize.width)) {
-      _snack('El árbol es más ancho que el lienzo: algunos nodos quedan fuera de la vista');
-    }
+    final Graph graph = BinaryTree.toGraph(root, BinaryTree.layoutArea(root));
+    _provider.replaceGraph(graph);
   }
 
   void _build() {
@@ -114,7 +93,7 @@ class _TreeScreenState extends State<TreeScreen> {
 
   void _insert() {
     final List<String> values = BinaryTree.parseList(_insertController.text);
-    final TreeResult current = BinaryTree.fromGraph(_copy.graphGetter());
+    final TreeResult current = BinaryTree.fromGraph(_provider.graphGetter());
     if (!current.isOk) {
       setState(() => _insertError = 'Corrige el árbol del lienzo antes de insertar: ${current.error}');
       return;
@@ -130,7 +109,7 @@ class _TreeScreenState extends State<TreeScreen> {
   }
 
   void _generate() {
-    _drawTree(BinaryTree.random(_nodeCount.clamp(1, _maxNodes)));
+    _drawTree(BinaryTree.random(_nodeCount.clamp(1, BinaryTree.maxRandomNodes)));
   }
 
   void _useInBuild(Map<Traversal, List<String>> lists) {
@@ -159,73 +138,10 @@ class _TreeScreenState extends State<TreeScreen> {
     _syncField(_otherController, lists == null ? '' : lists[_pair.other]!.join(', '));
   }
 
-  void _apply(String currentGraph) {
-    widget.mainProvider.replaceGraph(_copy.snapshot());
-    setState(() => _lastAppliedJson = currentGraph);
-    _snack('Grafo actualizado');
-  }
-
-  void _snack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-
-  void _onCanvasSize(Size size) {
-    if (size == _canvasSize || size.isEmpty) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _canvasSize = size;
-        _nodeCount = _nodeCount.clamp(1, _maxNodes);
-      });
-    });
-  }
-
-  void _startTour() {
-    final align = _isMobile ? ContentAlign.top : ContentAlign.left;
-    final List<TourStep> steps = [
-      TourStep(_tourKeys.traversals, 'Recorridos',
-          'Preorden, inorden y postorden del árbol dibujado. Toca uno para numerar los nodos en el lienzo. '
-          'Un hijo con valor menor o igual al del padre va a la izquierda; uno mayor, a la derecha.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.pair, 'Pareja de recorridos',
-          'Elige si vas a escribir el postorden con el inorden o con el preorden.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.postField, 'Postorden', 'Los valores en postorden, separados por comas o espacios. Empieza con el árbol actual.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.otherField, 'Segundo recorrido', 'El inorden o preorden de los mismos valores.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.build, 'Construir', 'Dibuja el único árbol que tiene esos dos recorridos.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.insertField, 'Insertar valores',
-          'Escribe un valor y pulsa Enter para agregarlo al árbol del lienzo siguiendo la regla: '
-          'menor o igual a la izquierda, mayor a la derecha. Puedes escribir varios separados por comas.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.insert, 'Insertar', 'Agrega los valores, uno por uno y en orden, al árbol actual.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.count, 'Cantidad de nodos', 'Tamaño del árbol aleatorio.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_tourKeys.generate, 'Generar', 'Reemplaza el lienzo por un árbol aleatorio.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_undoKey, 'Deshacer', 'Recupera lo que había antes de construir o generar.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_publishKey, 'Aplicar al grafo principal',
-          'Envía el árbol al grafo principal. Se activa solo cuando hay cambios.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_manualKey, 'Cómo usar Árboles',
-          'Abre la guía del modo Árboles en PDF.',
-          align: align, shape: ShapeLightFocus.RRect),
-    ].where((s) => s.key.currentContext != null).toList();
-
-    if (steps.isNotEmpty) GraphTour.show(context, steps);
-  }
-
   @override
   Widget build(BuildContext context) {
     final GraphProvider provider = context.watch<GraphProvider>();
-    final String currentGraph = jsonEncode(_copy.graphGetter().toJson());
-    final bool hasChanges = _lastAppliedJson != currentGraph;
-
-    final TreeResult tree = BinaryTree.fromGraph(_copy.graphGetter());
+    final TreeResult tree = BinaryTree.fromGraph(_provider.graphGetter());
     final Map<Traversal, List<TreeNode>>? orders = tree.root == null
         ? null
         : {for (final t in Traversal.values) t: BinaryTree.traverse(tree.root, t)};
@@ -247,9 +163,8 @@ class _TreeScreenState extends State<TreeScreen> {
     final bool canBuild = _postController.text.trim().isNotEmpty && _otherController.text.trim().isNotEmpty;
 
     final OptionsConfig options = OptionsConfig(
-      onApply: () => _apply(currentGraph),
       onUndo: provider.undo,
-      onHelp: _startTour,
+      onRedo: provider.redo,
       onOpen: () => showOpenDialog(context, provider),
       onSave: () => showSaveDialog(context, provider),
       onClear: provider.clearGraph,
@@ -258,8 +173,8 @@ class _TreeScreenState extends State<TreeScreen> {
         title: 'Árboles',
         assetPath: 'assets/docs/guia_arboles.pdf',
       ),
-      hasChanges: hasChanges,
       canUndo: provider.canUndo,
+      canRedo: provider.canRedo,
     );
 
     final bool mobile = _isMobile;
@@ -288,33 +203,22 @@ class _TreeScreenState extends State<TreeScreen> {
       insertError: _insertError,
       onInsert: _insertController.text.trim().isNotEmpty ? _insert : null,
       nodeCount: _nodeCount,
-      maxNodes: _maxNodes,
+      maxNodes: BinaryTree.maxRandomNodes,
       onNodeCountChanged: (n) => setState(() => _nodeCount = n),
       onGenerate: _generate,
       keys: _tourKeys,
     );
 
-    return PopScope(
-      canPop: !hasChanges,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        showConfirmExitDialog(context, _copy);
-      },
+    return UnsavedGraphScope(
+      provider: _provider,
       child: EditorShell(
         mode: AppMode.tree,
-        canvas: LayoutBuilder(builder: (context, constraints) {
-          _onCanvasSize(constraints.biggest);
-          return GraphWidget(canvasOverlay: TreeOverlay(visitOrder: visitOrder));
-        }),
+        canvas: GraphWidget(canvasOverlay: TreeOverlay(visitOrder: visitOrder)),
         functions: functions,
         summary: mobile ? _TreeSummaryLine(lists: lists, error: tree.error) : traversalsBlock,
         summaryOnWeb: true,
         options: options,
-        optionsKeys: {
-          OptionKind.apply: _publishKey,
-          OptionKind.undo: _undoKey,
-          OptionKind.manual: _manualKey,
-        },
+        tour: treeTour(_tourKeys),
         hint: 'Toca el lienzo para crear un nodo con su valor y arrastra del padre al hijo',
       ),
     );

@@ -60,19 +60,36 @@ class Graph {
     return nodes[id];
   }
 
-  String findNodeAt(double x, double y) {
+  String findNodeAt(double x, double y, {double minRadius = 0}) {
+    final double hitRadius = max(radius, minRadius);
     String nodeId = "";
+    double best = hitRadius * hitRadius;
     nodes.forEach((id, node){
       double dx = node.x - x;
       double dy = node.y - y;
       double d = (dx * dx) + (dy * dy);
-      if( d <= (radius+radius+3) * (radius+radius+3)) {
-        if( d <= radius * radius) {
-          nodeId = id;
-        }
+      if(d <= best) {
+        best = d;
+        nodeId = id;
       }
     });
     return nodeId;
+  }
+
+  Rect? get bounds {
+    if(nodes.isEmpty) return null;
+    final Set<String> looped = {for (final e in edges.values) if (e.isLoop()) e.sourceNodeId};
+    double left = double.infinity, top = double.infinity, right = -double.infinity, bottom = -double.infinity;
+    for(final Node node in nodes.values){
+      final double r = node.radius;
+      final double extraRight = looped.contains(node.id) ? selfLoopCenterDistance(r) + selfLoopRadius - r : 0;
+      final double extraBottom = looped.contains(node.id) ? selfLoopRadius + 22 : 0;
+      left = min(left, node.x - r);
+      top = min(top, node.y - r);
+      right = max(right, node.x + r + extraRight);
+      bottom = max(bottom, node.y + r + extraBottom);
+    }
+    return Rect.fromLTRB(left, top, right, bottom).inflate(20);
   }
 
   List<Edge> findEdgesFrom(String id) {
@@ -91,9 +108,8 @@ class Graph {
     return xEdges;
   }
 
-  String findEdgeAt(double x, double y) {
+  String findEdgeAt(double x, double y, {double tolerance = 10}) {
     String edgeId = "";
-    double tolerance = 10;
     edges.forEach((id, edge){
       Node sourceNode = nodes[edge.sourceNodeId]!;
       Node targetNode = nodes[edge.targetNodeId]!;
@@ -103,6 +119,7 @@ class Graph {
         double dy = loopEdgeCenter.dy - y;
         double d = sqrt(dx*dx + dy*dy);
         if((d - selfLoopRadius).abs() <= tolerance) edgeId = id;
+        return;
       }
 
       final dx = targetNode.x - sourceNode.x;
