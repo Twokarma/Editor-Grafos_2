@@ -31,6 +31,7 @@ class AppColors {
   static const Color matrixBorders = Color.fromARGB(127, 0, 66, 117);
   //gridCanvas
   static const Color gridColor = Color.fromARGB(255, 179, 179, 179);
+  static const Color canvasBackground = white;
   //johnson
   static const Color johnsonNodeLines = Color.fromARGB(255, 0, 41, 71);
   static const Color treeOrderBadge = Color.fromARGB(255, 251, 133, 0);

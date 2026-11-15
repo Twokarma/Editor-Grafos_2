@@ -43,6 +43,7 @@ class GraphPainter extends CustomPainter{
 
   static const double _parallelEdgeOffset = 7.5;
   static const double _labelGap = 8;
+  static const double _movingRingWidth = 4.5;
 
   static const double _gridSpacing = 24;
   static const double _gridMinScreenSpacing = 14;
@@ -156,7 +157,7 @@ class GraphPainter extends CustomPainter{
       if (canvasOverlay.showsEdgeWeights) label.paint(canvas, Offset(midX - label.width / 2, midY - label.height / 2));
     });
 
-    canvasOverlay.paintAfterEdges(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf));
+    canvasOverlay.paintAfterEdges(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf, edges: edges));
 
     if(dragSourceId != "" && dragSourceId != "tooClose" && dragCurrentPosition != null) {
       final dragSource = nodes[dragSourceId];
@@ -167,10 +168,19 @@ class GraphPainter extends CustomPainter{
 
     nodes.forEach((id, node){
       final pos = _positionOf(node);
-      final nodeColor = Color(node.color);
+      final pathColor = canvasOverlay.pathNodeColor(id, edges);
+      final nodeColor = pathColor ?? Color(node.color);
       canvas.drawCircle(pos, node.radius, Paint()..color = nodeColor);
+      final ringColor = pathColor ?? (id == movingNodeId ? nodeColor : null);
+      if (ringColor != null) {
+        final ring = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _movingRingWidth;
+        canvas.drawCircle(pos, node.radius + _movingRingWidth / 2, ring..color = AppColors.canvasBackground);
+        canvas.drawCircle(pos, node.radius + _movingRingWidth * 1.5, ring..color = ringColor);
+      }
 
-      final labelColor = nodeColor.computeLuminance() > 0.5 ? AppColors.lightNodeLabel : AppColors.darkNodeLabel;
+      final labelColor = nodeColor.computeLuminance() > 0.179 ? AppColors.darkNodeLabel : AppColors.lightNodeLabel;
       final label = TextPainter(
         text: TextSpan(
             text: node.name,
@@ -186,7 +196,7 @@ class GraphPainter extends CustomPainter{
       label.paint(canvas, namePos);
     });
 
-    canvasOverlay.paintAfterNodes(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf));
+    canvasOverlay.paintAfterNodes(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf, edges: edges));
 
     canvas.restore();
   }

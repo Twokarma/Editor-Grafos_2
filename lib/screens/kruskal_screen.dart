@@ -138,7 +138,7 @@ class _KruskalScreenState extends State<KruskalScreen> {
       child: EditorShell(
         mode: AppMode.kruskal,
         canvas: GraphWidget(
-          canvasOverlay: HighlightOverlay(_treeEdgeIds, AppColors.assignmentEdge),
+          canvasOverlay: HighlightOverlay(_treeEdgeIds, AppColors.assignmentEdge, ringPathNodes: true),
         ),
         functions: KruskalFunctions(
           message: message,

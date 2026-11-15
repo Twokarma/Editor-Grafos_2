@@ -9,8 +9,9 @@ class OverlayPaintContext {
   final Canvas canvas;
   final Map<String, Node> nodes;
   final Offset Function(Node) positionOf;
+  final Map<String, Edge> edges;
 
-  OverlayPaintContext({required this.canvas, required this.nodes, required this.positionOf});
+  OverlayPaintContext({required this.canvas, required this.nodes, required this.positionOf, this.edges = const {}});
 }
 
 abstract class CanvasOverlay {
@@ -29,6 +30,10 @@ abstract class CanvasOverlay {
 
   String edgeLabelSuffix(Edge edge){
     return "";
+  }
+
+  Color? pathNodeColor(String nodeId, Map<String, Edge> edges){
+    return null;
   }
 
   Offset namePosition(Node node){

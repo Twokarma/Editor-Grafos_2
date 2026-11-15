@@ -813,11 +813,13 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
     vsync: this,
     duration: Duration(milliseconds: 900 + 90 * AppMode.values.length),
   );
-  int? _openIndex;
+  final ScrollController _sortRow = ScrollController();
+  AppMode? _openMode;
 
   @override
   void dispose() {
     _row.dispose();
+    _sortRow.dispose();
     _enter.dispose();
     super.dispose();
   }
@@ -838,7 +840,8 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
   Widget build(BuildContext context) {
     final double width = widget.width;
     final double side = width > 1200 ? (width - 1152) / 2 : 24;
-    const List<AppMode> modes = AppMode.values;
+    final List<AppMode> algorithms = AppMode.values.where((m) => m.group != ModeGroup.sort).toList();
+    final List<AppMode> sorts = AppMode.values.where((m) => m.group == ModeGroup.sort).toList();
     final double total = _enter.duration!.inMilliseconds.toDouble();
 
     return Padding(
@@ -874,57 +877,75 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
             once: true,
             builder: (context, p) {
               _maybeEnter(p);
-              return ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  scrollbars: false,
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.trackpad,
-                    PointerDeviceKind.stylus,
-                  },
-                ),
-                child: Scrollbar(
-                  controller: _row,
-                  thumbVisibility: true,
-                  interactive: true,
-                  child: SingleChildScrollView(
-                    controller: _row,
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    padding: EdgeInsets.fromLTRB(side, 32, side, 40),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (int i = 0; i < modes.length; i++) ...[
-                          if (i > 0) const SizedBox(width: 20),
-                          AnimatedBuilder(
-                            animation: _enter,
-                            builder: (context, child) {
-                              final double start = (90 * i) / total;
-                              final double end = math.min(1, (90 * i + 900) / total);
-                              final double t = const Cubic(.16, .84, .24, 1)
-                                  .transform(Interval(start, end).transform(_enter.value));
-                              return Opacity(
-                                opacity: t,
-                                child: Transform.translate(offset: Offset(160 * (1 - t), 0), child: child),
-                              );
-                            },
-                            child: _MethodCard(
-                              mode: modes[i],
-                              open: _openIndex == i,
-                              onToggle: () => setState(() => _openIndex = _openIndex == i ? null : i),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildRow(context, controller: _row, modes: algorithms, side: side, total: total, delayOffset: 0),
+                  _buildRow(context, controller: _sortRow, modes: sorts, side: side, total: total, delayOffset: 2),
+                ],
               );
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context, {
+    required ScrollController controller,
+    required List<AppMode> modes,
+    required double side,
+    required double total,
+    required int delayOffset,
+  }) {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        scrollbars: false,
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+        },
+      ),
+      child: Scrollbar(
+        controller: controller,
+        thumbVisibility: true,
+        interactive: true,
+        child: SingleChildScrollView(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          padding: EdgeInsets.fromLTRB(side, 32, side, 40),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < modes.length; i++) ...[
+                if (i > 0) const SizedBox(width: 20),
+                AnimatedBuilder(
+                  animation: _enter,
+                  builder: (context, child) {
+                    final int k = i + delayOffset;
+                    final double start = math.min(1, (90 * k) / total);
+                    final double end = math.min(1, (90 * k + 900) / total);
+                    final double t = const Cubic(.16, .84, .24, 1)
+                        .transform(Interval(start, end).transform(_enter.value));
+                    return Opacity(
+                      opacity: t,
+                      child: Transform.translate(offset: Offset(160 * (1 - t), 0), child: child),
+                    );
+                  },
+                  child: _MethodCard(
+                    mode: modes[i],
+                    open: _openMode == modes[i],
+                    onToggle: () => setState(() => _openMode = _openMode == modes[i] ? null : modes[i]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

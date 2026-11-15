@@ -198,7 +198,7 @@ class _DijkstraScreenState extends State<DijkstraScreen> {
         // Sin allowDirected: false, el diálogo de arista ofrece
         // Directed y Non-directed.
         canvas: GraphWidget(
-          canvasOverlay: HighlightOverlay(_pathEdgeIds, AppColors.assignmentEdge),
+          canvasOverlay: HighlightOverlay(_pathEdgeIds, AppColors.assignmentEdge, ringPathNodes: true),
         ),
         functions: DijkstraFunctions(
           message: error,

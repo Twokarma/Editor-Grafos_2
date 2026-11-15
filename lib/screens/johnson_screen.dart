@@ -288,7 +288,8 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
                   _pathEdgeIds,
                   _objective == Objective.max? AppColors.maxJohnson : AppColors.minJohnson,
                   _lastResult ?? JohnsonResult1(),
-                  _lastResult != null? _service!.nodes : <Node>[]
+                  _lastResult != null? _service!.nodes : <Node>[],
+                  ringPathNodes: true,
               ),
             ),
             functions: functions,

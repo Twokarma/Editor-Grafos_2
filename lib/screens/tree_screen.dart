@@ -27,8 +27,8 @@ class TreeScreen extends StatefulWidget {
 class _TreeScreenState extends State<TreeScreen> {
   late final GraphProvider _provider;
 
-  TreePair _pair = TreePair.postIn;
-  final TextEditingController _postController = TextEditingController();
+  TreePair _pair = TreePair.inPost;
+  final TextEditingController _inController = TextEditingController();
   final TextEditingController _otherController = TextEditingController();
   String? _buildError;
 
@@ -46,14 +46,14 @@ class _TreeScreenState extends State<TreeScreen> {
   void initState() {
     super.initState();
     _provider = context.read<GraphProvider>();
-    _postController.addListener(_onFieldsChanged);
+    _inController.addListener(_onFieldsChanged);
     _otherController.addListener(_onFieldsChanged);
     _insertController.addListener(_onInsertChanged);
   }
 
   @override
   void dispose() {
-    _postController.dispose();
+    _inController.dispose();
     _otherController.dispose();
     _insertController.dispose();
     _insertFocus.dispose();
@@ -78,7 +78,7 @@ class _TreeScreenState extends State<TreeScreen> {
   void _build() {
     FocusScope.of(context).unfocus();
     final TreeResult result = BinaryTree.fromTraversals(
-      BinaryTree.parseList(_postController.text),
+      BinaryTree.parseList(_inController.text),
       BinaryTree.parseList(_otherController.text),
       _pair,
     );
@@ -86,7 +86,7 @@ class _TreeScreenState extends State<TreeScreen> {
       setState(() => _buildError = result.error);
       return;
     }
-    _autoText[_postController] = _postController.text;
+    _autoText[_inController] = _inController.text;
     _autoText[_otherController] = _otherController.text;
     _drawTree(result.root!);
   }
@@ -113,7 +113,7 @@ class _TreeScreenState extends State<TreeScreen> {
   }
 
   void _useInBuild(Map<Traversal, List<String>> lists) {
-    _setAuto(_postController, lists[Traversal.post]!.join(', '));
+    _setAuto(_inController, lists[Traversal.inorder]!.join(', '));
     _setAuto(_otherController, lists[_pair.other]!.join(', '));
   }
 
@@ -134,7 +134,7 @@ class _TreeScreenState extends State<TreeScreen> {
   }
 
   void _syncFields(Map<Traversal, List<String>>? lists) {
-    _syncField(_postController, lists == null ? '' : lists[Traversal.post]!.join(', '));
+    _syncField(_inController, lists == null ? '' : lists[Traversal.inorder]!.join(', '));
     _syncField(_otherController, lists == null ? '' : lists[_pair.other]!.join(', '));
   }
 
@@ -160,7 +160,7 @@ class _TreeScreenState extends State<TreeScreen> {
       }
     }
 
-    final bool canBuild = _postController.text.trim().isNotEmpty && _otherController.text.trim().isNotEmpty;
+    final bool canBuild = _inController.text.trim().isNotEmpty && _otherController.text.trim().isNotEmpty;
 
     final OptionsConfig options = OptionsConfig(
       onUndo: provider.undo,
@@ -194,7 +194,7 @@ class _TreeScreenState extends State<TreeScreen> {
         _pair = p;
         _buildError = null;
       }),
-      postController: _postController,
+      inController: _inController,
       otherController: _otherController,
       buildError: _buildError,
       onBuild: canBuild ? _build : null,
