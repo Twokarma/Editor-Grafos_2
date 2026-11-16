@@ -4,10 +4,13 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:graph_maker_app_2/models/app_mode.dart';
 import 'package:graph_maker_app_2/navigation/go_to_mode.dart';
+import 'package:graph_maker_app_2/providers/fuzzy_provider.dart';
+import 'package:graph_maker_app_2/screens/fuzzy_screen.dart';
 import 'package:graph_maker_app_2/theme/app_colors.dart';
 
 class _Palette {
@@ -53,6 +56,44 @@ Future<void> _openLink(String url) async {
 }
 
 String _modeName(AppMode mode) => mode.group == ModeGroup.sort ? '${mode.label} Sort' : mode.label;
+
+/// Datos de una tarjeta de la sección "Algoritmos y ordenamientos".
+/// Permite mezclar los AppMode con módulos que no son un AppMode (p. ej. lógica difusa).
+class _MethodEntry {
+  final String name;
+  final IconData icon;
+  final String description;
+  final void Function(BuildContext context) onOpen;
+
+  const _MethodEntry({
+    required this.name,
+    required this.icon,
+    required this.description,
+    required this.onOpen,
+  });
+}
+
+_MethodEntry _entryFromMode(AppMode mode) => _MethodEntry(
+      name: _modeName(mode),
+      icon: mode.icon,
+      description: mode.description,
+      onOpen: (context) => _openMode(context, mode),
+    );
+
+final _MethodEntry _fuzzyEntry = _MethodEntry(
+  name: 'Lógica difusa',
+  icon: Icons.tune,
+  description: 'Sistemas de inferencia difusa Mamdani y Sugeno: define variables, '
+      'funciones de pertenencia y reglas, y simula el resultado.',
+  onOpen: (context) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => ChangeNotifierProvider(
+        create: (_) => FuzzyProvider(),
+        child: const FuzzyScreen(),
+      ),
+    ),
+  ),
+);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -811,10 +852,11 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
   final ScrollController _row = ScrollController();
   late final AnimationController _enter = AnimationController(
     vsync: this,
-    duration: Duration(milliseconds: 900 + 90 * AppMode.values.length),
+    // +1 por la tarjeta extra de Lógica difusa.
+    duration: Duration(milliseconds: 900 + 90 * (AppMode.values.length + 1)),
   );
   final ScrollController _sortRow = ScrollController();
-  AppMode? _openMode;
+  String? _openName;
 
   @override
   void dispose() {
@@ -840,8 +882,12 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
   Widget build(BuildContext context) {
     final double width = widget.width;
     final double side = width > 1200 ? (width - 1152) / 2 : 24;
-    final List<AppMode> algorithms = AppMode.values.where((m) => m.group != ModeGroup.sort).toList();
-    final List<AppMode> sorts = AppMode.values.where((m) => m.group == ModeGroup.sort).toList();
+    final List<_MethodEntry> algorithms = [
+      ...AppMode.values.where((m) => m.group != ModeGroup.sort).map(_entryFromMode),
+      _fuzzyEntry,
+    ];
+    final List<_MethodEntry> sorts =
+        AppMode.values.where((m) => m.group == ModeGroup.sort).map(_entryFromMode).toList();
     final double total = _enter.duration!.inMilliseconds.toDouble();
 
     return Padding(
@@ -894,7 +940,7 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
   Widget _buildRow(
     BuildContext context, {
     required ScrollController controller,
-    required List<AppMode> modes,
+    required List<_MethodEntry> modes,
     required double side,
     required double total,
     required int delayOffset,
@@ -937,9 +983,11 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
                     );
                   },
                   child: _MethodCard(
-                    mode: modes[i],
-                    open: _openMode == modes[i],
-                    onToggle: () => setState(() => _openMode = _openMode == modes[i] ? null : modes[i]),
+                    entry: modes[i],
+                    open: _openName == modes[i].name,
+                    onToggle: () => setState(
+                      () => _openName = _openName == modes[i].name ? null : modes[i].name,
+                    ),
                   ),
                 ),
               ],
@@ -952,11 +1000,11 @@ class _MethodsSectionState extends State<_MethodsSection> with SingleTickerProvi
 }
 
 class _MethodCard extends StatefulWidget {
-  final AppMode mode;
+  final _MethodEntry entry;
   final bool open;
   final VoidCallback onToggle;
 
-  const _MethodCard({required this.mode, required this.open, required this.onToggle});
+  const _MethodCard({required this.entry, required this.open, required this.onToggle});
 
   @override
   State<_MethodCard> createState() => _MethodCardState();
@@ -1015,7 +1063,7 @@ class _MethodCardState extends State<_MethodCard> {
                             color: _hovered ? _Palette.accent : _Palette.surface,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Icon(widget.mode.icon, size: 64, color: _hovered ? _Palette.white : _Palette.primary),
+                          child: Icon(widget.entry.icon, size: 64, color: _hovered ? _Palette.white : _Palette.primary),
                         ),
                       ),
                       Padding(
@@ -1023,7 +1071,7 @@ class _MethodCardState extends State<_MethodCard> {
                         child: Row(
                           children: [
                             Expanded(
-                              child: Text(_modeName(widget.mode), style: _sans(size: 18, weight: FontWeight.w600)),
+                              child: Text(widget.entry.name, style: _sans(size: 18, weight: FontWeight.w600)),
                             ),
                             AnimatedRotation(
                               turns: widget.open ? 0.125 : 0,
@@ -1051,7 +1099,7 @@ class _MethodCardState extends State<_MethodCard> {
                             Padding(
                               padding: const EdgeInsets.fromLTRB(6, 6, 6, 14),
                               child: Text(
-                                widget.mode.description,
+                                widget.entry.description,
                                 style: _sans(size: 15, height: 1.5, color: _Palette.muted),
                               ),
                             ),
@@ -1066,7 +1114,7 @@ class _MethodCardState extends State<_MethodCard> {
                                     shape: const StadiumBorder(),
                                     textStyle: _sans(size: 16, weight: FontWeight.w600, color: _Palette.white),
                                   ),
-                                  onPressed: () => _openMode(context, widget.mode),
+                                  onPressed: () => widget.entry.onOpen(context),
                                   child: const Text('Abrir'),
                                 ),
                               ),

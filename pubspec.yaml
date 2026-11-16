@@ -19,6 +19,8 @@ dependencies:
   pdfrx: ^2.6.5
   google_fonts: ^9.0.0
   url_launcher: ^6.3.3
+  fl_chart: ^0.69.0   # gráficas de las funciones de pertenencia (ya lo tenías)
+  # file_picker: ...  # (opcional, solo si luego importas archivos .fis de MATLAB)
 
 dev_dependencies:
   flutter_test:
