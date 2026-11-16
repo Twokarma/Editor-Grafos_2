@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +13,7 @@ import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
 import '../widgets/overlays/highlight_overlay.dart';
 import '../widgets/panels/kruskal_functions.dart';
+import '../tours/graph_tours.dart';
 import 'kruskal_steps_screen.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -22,20 +21,17 @@ import 'pdf_viewer_screen.dart';
 ///
 /// El usuario dibuja nodos y aristas NO dirigidas con peso; al pulsar el botón
 /// se resuelve y las aristas del árbol quedan resaltadas sobre el grafo.
-///
-/// Igual que AssignmentScreen, JohnsonScreen y TransportationScreen, trabaja
-/// sobre una COPIA del grafo (el provider que recibe de _pushWithCopy).
 class KruskalScreen extends StatefulWidget {
-  final GraphProvider mainProvider;
-  const KruskalScreen({super.key, required this.mainProvider});
+  const KruskalScreen({super.key});
 
   @override
   State<KruskalScreen> createState() => _KruskalScreenState();
 }
 
 class _KruskalScreenState extends State<KruskalScreen> {
-  late final GraphProvider _copy;
-  late String _lastAppliedJson;
+  final KruskalTourKeys _tourKeys = KruskalTourKeys();
+
+  late final GraphProvider _provider;
 
   KruskalResult? _result;
   Map<String, String> _names = const {};
@@ -44,14 +40,13 @@ class _KruskalScreenState extends State<KruskalScreen> {
   @override
   void initState() {
     super.initState();
-    _copy = context.read<GraphProvider>();
-    _copy.addListener(_clearResult);
-    _lastAppliedJson = jsonEncode(_copy.graphGetter().toJson());
+    _provider = context.read<GraphProvider>();
+    _provider.addListener(_clearResult);
   }
 
   @override
   void dispose() {
-    _copy.removeListener(_clearResult);
+    _provider.removeListener(_clearResult);
     super.dispose();
   }
 
@@ -70,7 +65,7 @@ class _KruskalScreenState extends State<KruskalScreen> {
   }
 
   void _solve(KruskalGoal goal) {
-    final graph = _copy.graphGetter();
+    final graph = _provider.graphGetter();
     final names = {for (final n in graph.nodes.values) n.id: n.name};
 
     final KruskalResult result;
@@ -108,16 +103,6 @@ class _KruskalScreenState extends State<KruskalScreen> {
     );
   }
 
-  void _apply(String currentGraph) {
-    widget.mainProvider.replaceGraph(_copy.snapshot());
-    setState(() {
-      _lastAppliedJson = currentGraph;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Grafo actualizado')),
-    );
-  }
-
   String _summaryText(String? message) {
     final KruskalResult? result = _result;
     if (message != null) return message;
@@ -128,38 +113,32 @@ class _KruskalScreenState extends State<KruskalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final graphProviderCopy = context.watch<GraphProvider>();
-    final String currentGraph = jsonEncode(_copy.graphGetter().toJson());
-    final List<String> messages = _copy.validateGraph();
-    final bool hasChanges = _lastAppliedJson != currentGraph;
-    final bool canSolve = _copy.graphGetter().edges.isNotEmpty && messages.isEmpty;
+    final graphProvider = context.watch<GraphProvider>();
+    final List<String> messages = _provider.validateGraph();
+    final bool canSolve = _provider.graphGetter().edges.isNotEmpty && messages.isEmpty;
     final String? message = messages.isNotEmpty ? messages.first : null;
 
     final OptionsConfig options = OptionsConfig(
-      onApply: () => _apply(currentGraph),
-      onUndo: graphProviderCopy.undo,
-      onOpen: () => showOpenDialog(context, graphProviderCopy),
-      onSave: () => showSaveDialog(context, graphProviderCopy),
-      onClear: graphProviderCopy.clearGraph,
+      onUndo: graphProvider.undo,
+      onRedo: graphProvider.redo,
+      onOpen: () => showOpenDialog(context, graphProvider),
+      onSave: () => showSaveDialog(context, graphProvider),
+      onClear: graphProvider.clearGraph,
       onManual: () => openManual(
         context,
         title: 'Manual de Kruskal',
         assetPath: 'assets/docs/guia_kruskal.pdf',
       ),
-      hasChanges: hasChanges,
-      canUndo: graphProviderCopy.canUndo,
+      canUndo: graphProvider.canUndo,
+      canRedo: graphProvider.canRedo,
     );
 
-    return PopScope(
-      canPop: !hasChanges,
-      onPopInvokedWithResult: ((didPop, _) {
-        if (didPop) return;
-        showConfirmExitDialog(context, _copy);
-      }),
+    return UnsavedGraphScope(
+      provider: _provider,
       child: EditorShell(
         mode: AppMode.kruskal,
         canvas: GraphWidget(
-          canvasOverlay: HighlightOverlay(_treeEdgeIds, AppColors.assignmentEdge),
+          canvasOverlay: HighlightOverlay(_treeEdgeIds, AppColors.assignmentEdge, ringPathNodes: true),
         ),
         functions: KruskalFunctions(
           message: message,
@@ -169,6 +148,9 @@ class _KruskalScreenState extends State<KruskalScreen> {
           onSolve: _solve,
           onOpenSteps: _result != null ? _openSteps : null,
           format: _fmt,
+          minKey: _tourKeys.minimum,
+          maxKey: _tourKeys.maximum,
+          stepsKey: _tourKeys.steps,
         ),
         summary: Text(
           _summaryText(message),
@@ -178,6 +160,7 @@ class _KruskalScreenState extends State<KruskalScreen> {
           ),
         ),
         options: options,
+        tour: kruskalTour(_tourKeys),
         hint: 'Dibuja aristas no dirigidas con peso y elige el árbol en Funciones',
       ),
     );

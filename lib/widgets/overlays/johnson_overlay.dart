@@ -14,7 +14,7 @@ class JohnsonOverlay extends HighlightOverlay{
   final Map<String, Node> johnsonNodes = {};
   final yCircleOffset = -0.15;
 
-  new(super.highlightedEdges, super.highlightColor, this.result, List<Node> johnsonNodes){
+  new(super.highlightedEdges, super.highlightColor, this.result, List<Node> johnsonNodes, {super.ringPathNodes}){
     for(Node node in johnsonNodes) {this.johnsonNodes[node.id] = node;}
   }
 
@@ -32,7 +32,7 @@ class JohnsonOverlay extends HighlightOverlay{
     final canvas = paintCtx.canvas;
     final paint = Paint()
     ..strokeWidth = 3
-    ..color = AppColors.johnsonNodeLines;
+    ..color = AppColors.white;
 
     for(int i = 0; i < nodes.length; i++){
       Node node = nodes[i];
@@ -41,8 +41,8 @@ class JohnsonOverlay extends HighlightOverlay{
       canvas.drawLine(Offset(_computeCircleXOffset(center, y, node.radius, 1), y), Offset(_computeCircleXOffset(center, y, node.radius, -1), y), paint);
       canvas.drawLine(Offset(center.dx, y), Offset(center.dx, center.dy + node.radius), paint);
 
-      final nodeColor = Color(node.color);
-      final labelColor = nodeColor.computeLuminance() > 0.5 ? AppColors.lightNodeLabel : AppColors.darkNodeLabel;
+      final nodeColor = pathNodeColor(node.id, paintCtx.edges) ?? Color(node.color);
+      final labelColor = nodeColor.computeLuminance() > 0.179 ? AppColors.darkNodeLabel : AppColors.lightNodeLabel;
       final latest = TextPainter(
         text: TextSpan(
             text: result.distanceMax[0][i].toString(),

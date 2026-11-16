@@ -36,8 +36,8 @@ enum Traversal {
 }
 
 enum TreePair {
-  postIn('Postorden + Inorden', Traversal.inorder),
-  postPre('Postorden + Preorden', Traversal.pre);
+  inPost('Inorden + Postorden', Traversal.post),
+  inPre('Inorden + Preorden', Traversal.pre);
 
   const TreePair(this.label, this.other);
   final String label;
@@ -288,16 +288,16 @@ class BinaryTree {
   static List<String> parseList(String text) =>
       text.split(RegExp(r'[,;\s]+')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
-  static TreeResult fromTraversals(List<String> postText, List<String> otherText, TreePair pair) {
+  static TreeResult fromTraversals(List<String> inText, List<String> otherText, TreePair pair) {
     final String otherName = pair.other.label.toLowerCase();
-    if (postText.isEmpty) return const TreeResult.fail('Escribe el postorden');
+    if (inText.isEmpty) return const TreeResult.fail('Escribe el inorden');
     if (otherText.isEmpty) return TreeResult.fail('Escribe el $otherName');
 
-    final List<double> post = [];
-    for (final String s in postText) {
+    final List<double> ino = [];
+    for (final String s in inText) {
       final double? v = parseValue(s);
       if (v == null) return TreeResult.fail('"$s" no es un número (los decimales van con punto: 3.5)');
-      post.add(v);
+      ino.add(v);
     }
     final List<double> other = [];
     for (final String s in otherText) {
@@ -306,49 +306,51 @@ class BinaryTree {
       other.add(v);
     }
 
-    if (post.length != other.length) {
-      return TreeResult.fail('Los recorridos tienen distinta cantidad de elementos (${post.length} y ${other.length})');
+    if (ino.length != other.length) {
+      return TreeResult.fail('Los recorridos tienen distinta cantidad de elementos (${ino.length} y ${other.length})');
     }
-    final double? dupPost = _firstDuplicate(post);
-    if (dupPost != null) {
-      return TreeResult.fail('${formatValue(dupPost)} aparece repetido en el postorden: con valores repetidos el árbol no es único');
+    final double? dupIn = _firstDuplicate(ino);
+    if (dupIn != null) {
+      return TreeResult.fail('${formatValue(dupIn)} aparece repetido en el inorden: con valores repetidos el árbol no es único');
     }
     final double? dupOther = _firstDuplicate(other);
     if (dupOther != null) {
       return TreeResult.fail('${formatValue(dupOther)} aparece repetido en el $otherName: con valores repetidos el árbol no es único');
     }
     final Set<double> otherSet = other.toSet();
-    for (final double v in post) {
-      if (!otherSet.contains(v)) return TreeResult.fail('${formatValue(v)} está en el postorden pero no en el $otherName');
+    for (final double v in ino) {
+      if (!otherSet.contains(v)) return TreeResult.fail('${formatValue(v)} está en el inorden pero no en el $otherName');
     }
-    if (pair == TreePair.postIn) {
-      for (int i = 1; i < other.length; i++) {
-        if (other[i] <= other[i - 1]) {
-          return TreeResult.fail(
-              'El inorden de un árbol binario de búsqueda va de menor a mayor '
-              '(${formatValue(other[i - 1])} está antes que ${formatValue(other[i])})');
-        }
+    for (int i = 1; i < ino.length; i++) {
+      if (ino[i] <= ino[i - 1]) {
+        return TreeResult.fail(
+            'El inorden de un árbol binario de búsqueda va de menor a mayor '
+            '(${formatValue(ino[i - 1])} está antes que ${formatValue(ino[i])})');
       }
     }
 
-    int index = post.length - 1;
+    final bool fromPost = pair.other == Traversal.post;
+    final List<double> seq = fromPost ? other.reversed.toList() : other;
+    int index = 0;
     TreeNode? build(double? low, double? high) {
-      if (index < 0) return null;
-      final double v = post[index];
+      if (index >= seq.length) return null;
+      final double v = seq[index];
       if ((low != null && !(v > low)) || (high != null && !(v <= high))) return null;
-      index--;
+      index++;
       final TreeNode node = TreeNode(v);
-      node.right = build(v, high);
-      node.left = build(low, v);
+      if (fromPost) {
+        node.right = build(v, high);
+        node.left = build(low, v);
+      } else {
+        node.left = build(low, v);
+        node.right = build(v, high);
+      }
       return node;
     }
 
     final TreeNode? root = build(null, null);
-    if (root == null || index >= 0) {
-      return const TreeResult.fail('El postorden no corresponde a ningún árbol binario de búsqueda');
-    }
-    if (!_sameList(labels(root, pair.other), other.map(formatValue).toList())) {
-      return TreeResult.fail('El $otherName no corresponde al mismo árbol que el postorden');
+    if (root == null || index < seq.length) {
+      return TreeResult.fail('El $otherName no corresponde al mismo árbol que el inorden');
     }
     return TreeResult.ok(root);
   }
@@ -359,14 +361,6 @@ class BinaryTree {
       if (!seen.add(v)) return v;
     }
     return null;
-  }
-
-  static bool _sameList(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
   }
 
   static TreeNode insert(TreeNode? root, double value) {
@@ -429,7 +423,20 @@ class BinaryTree {
     return max(1, (usable / (2 * minRadius + _gap)).floor() + 1);
   }
 
-  static Graph toGraph(TreeNode root, Size area, {double top = 24, double bottom = 24}) {
+  static const double _layoutColumn = 76;
+  static const double _layoutLevel = 90;
+  static const double _layoutPadding = 24;
+
+  static Size layoutArea(TreeNode root) {
+    final int n = count(root);
+    final int levels = depth(root);
+    return Size(
+      2 * (maxRadius + _sideMargin) + max(0, n - 1) * _layoutColumn,
+      2 * _layoutPadding + 2 * maxRadius + levels * _layoutLevel,
+    );
+  }
+
+  static Graph toGraph(TreeNode root, Size area, {double top = _layoutPadding, double bottom = _layoutPadding}) {
     final List<TreeNode> inorder = traverse(root, Traversal.inorder);
     final int n = inorder.length;
     final int treeDepth = depth(root);

@@ -13,24 +13,19 @@ import 'package:graph_maker_app_2/widgets/overlays/johnson_overlay.dart';
 import 'package:graph_maker_app_2/widgets/panels/johnson_functions.dart';
 import 'package:graph_maker_app_2/widgets/panels/options_panel.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 
-import '../layout/breakpoints.dart';
 import '../models/node.dart';
 import '../widgets/dialogs/open_graph_dialog.dart';
 import '../widgets/dialogs/save_graph_dialog.dart';
 import '../widgets/graph_canvas.dart';
 import 'chat_screen.dart';
 
-// ★ AYUDA: imports nuevos
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
-import '../widgets/graph_tour.dart';
+import '../tours/graph_tours.dart';
 
 import 'pdf_viewer_screen.dart'; // ★ MANUAL: openManual()
 
 class JohnsonScreen extends StatefulWidget {
-  final GraphProvider mainProvider;
-  const JohnsonScreen({super.key, required this.mainProvider});
+  const JohnsonScreen({super.key});
 
   @override
   State<JohnsonScreen> createState() => _JohnsonScreenState();
@@ -39,7 +34,6 @@ class JohnsonScreen extends StatefulWidget {
 class _JohnsonScreenState extends State<JohnsonScreen> {
   JohnsonResult1? _lastResult;
   String _lastSignature = ''; // ★ ya no es late: evita errores si el listener se dispara antes
-  late String _lastAppliedJson;
   JohnsonService? _service;
   Objective _objective = Objective.max;
   String? _from;
@@ -48,54 +42,16 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
   String? _message;
   bool _hasChanges = true;
 
-  late final GraphProvider _copy;
+  late final GraphProvider _provider;
 
-  // ★ AYUDA: keys de cada botón que explica el tour
-  final _publishKey = GlobalKey();
-  final _undoKey = GlobalKey();
-  final _manualKey = GlobalKey();
-  final _helpKey = GlobalKey();
-  final _matrixKey = GlobalKey();
-  final _fromKey = GlobalKey();
-  final _toKey = GlobalKey();
-  final _objectiveKey = GlobalKey();
-
-  // ★ AYUDA: pasos del tour
-  void _startTour() {
-    final align = MediaQuery.sizeOf(context).width < Breakpoints.mobileUntil ? ContentAlign.top : ContentAlign.left;
-    List<TourStep> tourSteps = [
-      TourStep(_fromKey, 'Desde (Origen)',
-        'Vértice desde el que se calcula el camino.',
-        align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_toKey, 'Hacia (Destino)', 'Vértice al que quieres llegar.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_objectiveKey, 'Maximizar / Minimizar',
-          'Cambia entre el camino de mayor costo y el de menor costo.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_matrixKey, 'Matriz M[x]',
-          'Muestra las matrices de distancias calculadas por Johnson.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_undoKey, 'Deshacer',
-          'Revierte la última acción en esta copia del grafo.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_publishKey, 'Aplicar al grafo principal',
-          'Envía los cambios de esta copia al grafo principal. Se activa solo cuando hay cambios.',
-          align: align, shape: ShapeLightFocus.RRect),
-      TourStep(_manualKey, 'Cómo usar Johnson',
-          'Muestra una guía para utilizar la app con Johnson.',
-          align: align, shape: ShapeLightFocus.RRect)
-    ].where((s) => s.key.currentContext != null).toList();
-
-    if(tourSteps.isNotEmpty) GraphTour.show(context, tourSteps);
-  }
+  final JohnsonTourKeys _tourKeys = JohnsonTourKeys();
 
   @override
   void initState() {
     super.initState();
 
-    _copy = context.read<GraphProvider>();
-    _copy.addListener(_onGraphChanged);
-    _lastAppliedJson = jsonEncode(_copy.graphGetter().toJson());
+    _provider = context.read<GraphProvider>();
+    _provider.addListener(_onGraphChanged);
 
     // ★ setState dentro de _runJohnson: se ejecuta después del primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -119,7 +75,7 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
   @override
   void dispose() {
-    _copy.removeListener(_onGraphChanged);
+    _provider.removeListener(_onGraphChanged);
     super.dispose();
   }
 
@@ -136,15 +92,15 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
   void _runJohnson() {
     _lastSignature = _structureSignature();
-    List<Node> nodes = _copy.graphGetter().nodes.values.toList();
-    List<Edge> edges = _copy.graphGetter().edges.values.toList();
+    List<Node> nodes = _provider.graphGetter().nodes.values.toList();
+    List<Edge> edges = _provider.graphGetter().edges.values.toList();
 
     if (edges.isEmpty) {
       _fail("There are no edges");
       return;
     }
 
-    List<String> messages = _copy.validateGraph();
+    List<String> messages = _provider.validateGraph();
     if (messages.isNotEmpty) {
       // ★ CORRECCIÓN: faltaba el return
       _fail(messages.first);
@@ -192,7 +148,7 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
   }
 
   String _structureSignature() {
-    return _copy
+    return _provider
         .graphGetter()
         .edges
         .values
@@ -235,8 +191,8 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
     if (_pathEdgeIds.isEmpty) return '';
 
     final List<String> copy = _pathEdgeIds.toList();
-    final Map<String, Node> nodes = _copy.graphGetter().nodes;
-    final Map<String, Edge> edges = _copy.graphGetter().edges;
+    final Map<String, Node> nodes = _provider.graphGetter().nodes;
+    final Map<String, Edge> edges = _provider.graphGetter().edges;
 
     String path = "";
     for (int i = copy.length - 2; i >= 0; i--) {
@@ -247,16 +203,6 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
     // JohnsonService.path() agrega la distancia total como último elemento
     return "$path = ${copy[copy.length - 1]}";
-  }
-
-  void _apply(String currentGraph){
-    widget.mainProvider.replaceGraph(_copy.snapshot());
-    setState(() {
-      _lastAppliedJson = currentGraph;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Grafo actualizado'))
-    );
   }
 
   void _changeFrom(String? id){
@@ -285,7 +231,7 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
           builder: (_) => ChangeNotifierProvider.value(
-            value: _copy,
+            value: _provider,
             child: JohnsonMatrixScreen(
                 nodes: _service!.nodes,
                 result: _service!.result),
@@ -295,27 +241,24 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final graphProviderCopy = context.watch<GraphProvider>();
-    final String currentGraph = jsonEncode(_copy.graphGetter().toJson());
-    final bool hasChanges = _lastAppliedJson != currentGraph;
-    final List<String> messages = _copy.validateGraph();
-    final bool canSolve = _copy.graphGetter().edges.isNotEmpty && messages.isEmpty;
+    final graphProvider = context.watch<GraphProvider>();
+    final List<String> messages = _provider.validateGraph();
+    final bool canSolve = _provider.graphGetter().edges.isNotEmpty && messages.isEmpty;
     final String? pathText = _pathEdgeIds.isNotEmpty? _buildTextPath() : null;
 
     final OptionsConfig options = OptionsConfig(
-        onApply: () => _apply(currentGraph),
-        onUndo: graphProviderCopy.undo,
-        onHelp: _startTour,
-        onOpen: () => showOpenDialog(context, graphProviderCopy),
-        onSave: () => showSaveDialog(context, graphProviderCopy),
-        onClear: graphProviderCopy.clearGraph,
+        onUndo: graphProvider.undo,
+        onRedo: graphProvider.redo,
+        onOpen: () => showOpenDialog(context, graphProvider),
+        onSave: () => showSaveDialog(context, graphProvider),
+        onClear: graphProvider.clearGraph,
         onManual: () => openManual(
           context,
           title: 'Johnson',
           assetPath: 'assets/docs/guia_johnson.pdf',
         ),
-      hasChanges: hasChanges,
-      canUndo: graphProviderCopy.canUndo,
+      canUndo: graphProvider.canUndo,
+      canRedo: graphProvider.canRedo,
     );
     final JohnsonFunctions functions = JohnsonFunctions(
         path: pathText,
@@ -330,18 +273,14 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
         onToChanged: _changeTo,
         onObjectiveChanged: _changeObjective,
         onOpenMatrix: _openMatrix,
-        fromKey: _fromKey,
-        toKey: _toKey,
-        objectiveKey: _objectiveKey,
-        matrixKey: _matrixKey,
+        fromKey: _tourKeys.from,
+        toKey: _tourKeys.to,
+        objectiveKey: _tourKeys.objective,
+        matrixKey: _tourKeys.matrix,
     );
 
-    return PopScope(
-        canPop: !hasChanges,
-        onPopInvokedWithResult: ((didPop, result) {
-          if (didPop) return;
-          showConfirmExitDialog(context, _copy);
-        }),
+    return UnsavedGraphScope(
+        provider: _provider,
         child: EditorShell(
             mode: AppMode.johnson,
             canvas: GraphWidget(
@@ -349,7 +288,8 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
                   _pathEdgeIds,
                   _objective == Objective.max? AppColors.maxJohnson : AppColors.minJohnson,
                   _lastResult ?? JohnsonResult1(),
-                  _lastResult != null? _service!.nodes : <Node>[]
+                  _lastResult != null? _service!.nodes : <Node>[],
+                  ringPathNodes: true,
               ),
             ),
             functions: functions,
@@ -361,11 +301,7 @@ class _JohnsonScreenState extends State<JohnsonScreen> {
               ),
             ),
             options: options,
-            optionsKeys: {
-              OptionKind.apply: _publishKey,
-              OptionKind.undo: _undoKey,
-              OptionKind.manual: _manualKey,
-            },
+            tour: johnsonTour(_tourKeys),
             hint: "Elige origen, destino y objetivo en Funciones",
         ),
     );

@@ -31,9 +31,14 @@ class AppColors {
   static const Color matrixBorders = Color.fromARGB(127, 0, 66, 117);
   //gridCanvas
   static const Color gridColor = Color.fromARGB(255, 179, 179, 179);
+  static const Color canvasBackground = white;
   //johnson
   static const Color johnsonNodeLines = Color.fromARGB(255, 0, 41, 71);
   static const Color treeOrderBadge = Color.fromARGB(255, 251, 133, 0);
+  static const Color sortCurrent = Color.fromARGB(255, 251, 146, 60);
+  static const Color sortCompared = Color.fromARGB(255, 245, 194, 107);
+  static const Color sortTarget = Color.fromARGB(255, 142, 202, 230);
+  static const Color sortSorted = Color.fromARGB(255, 134, 239, 172);
   //new palette
   static const Color darkBlue = Color.fromARGB(255, 2, 48, 71);
   static const Color blue = Color.fromARGB(255, 33, 158, 188);

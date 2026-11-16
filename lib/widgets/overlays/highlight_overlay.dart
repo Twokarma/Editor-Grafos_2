@@ -7,8 +7,17 @@ import '../../models/edge.dart';
 class HighlightOverlay extends CanvasOverlay{
   final Set<String> highlightedEdges;
   final Color highlightColor;
+  final bool ringPathNodes;
 
-  const HighlightOverlay(this.highlightedEdges, this.highlightColor);
+  const HighlightOverlay(this.highlightedEdges, this.highlightColor, {this.ringPathNodes = false});
+
+  @override
+  Color? pathNodeColor(String nodeId, Map<String, Edge> edges) {
+    if (!ringPathNodes) return null;
+    final bool onPath = edges.values.any((e) =>
+        highlightedEdges.contains(e.id) && (e.sourceNodeId == nodeId || e.targetNodeId == nodeId));
+    return onPath ? highlightColor : null;
+  }
 
   @override
   Color? edgeColor(Edge edge) {

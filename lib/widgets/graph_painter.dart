@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:ui' show PointMode;
+
 import 'package:flutter/cupertino.dart';
 import 'package:graph_maker_app_2/models/app_viewport.dart';
 import 'package:graph_maker_app_2/widgets/canvas_drawing.dart';
@@ -18,7 +20,7 @@ class GraphPainter extends CustomPainter{
   final Offset? movingNodePosition;
   final CanvasOverlay canvasOverlay;
   final AppViewport viewport;
-
+  final bool showGrid;
 
   GraphPainter({
     required this.nodes,
@@ -29,6 +31,7 @@ class GraphPainter extends CustomPainter{
     this.movingNodePosition,
     this.canvasOverlay = const DefaultOverlay(),
     required this.viewport,
+    this.showGrid = true,
   });
 
   Offset _positionOf(Node node) {
@@ -40,32 +43,44 @@ class GraphPainter extends CustomPainter{
 
   static const double _parallelEdgeOffset = 7.5;
   static const double _labelGap = 8;
+  static const double _movingRingWidth = 4.5;
+
+  static const double _gridSpacing = 24;
+  static const double _gridMinScreenSpacing = 14;
+  static const double _gridDotSize = 2.4;
+
+  void _paintGrid(Canvas canvas, Size size) {
+    double spacing = _gridSpacing;
+    while (spacing * viewport.scale < _gridMinScreenSpacing) {
+      spacing *= 2;
+    }
+    final Rect visible = viewport.visibleWorldRect(size);
+    final double startX = (visible.left / spacing).floorToDouble() * spacing + spacing / 2;
+    final double startY = (visible.top / spacing).floorToDouble() * spacing + spacing / 2;
+    final List<Offset> points = [];
+    for (double y = startY; y <= visible.bottom + spacing; y += spacing) {
+      for (double x = startX; x <= visible.right + spacing; x += spacing) {
+        points.add(viewport.toScreen(Offset(x, y)));
+      }
+    }
+    canvas.drawPoints(
+      PointMode.points,
+      points,
+      Paint()
+        ..color = AppColors.gridColor
+        ..strokeWidth = _gridDotSize
+        ..strokeCap = StrokeCap.round,
+    );
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    /*canvas.clipRect(Offset.zero & size);
+    canvas.clipRect(Offset.zero & size);
+    if (showGrid) _paintGrid(canvas, size);
 
     canvas.save();
     canvas.translate(viewport.offset.dx, viewport.offset.dy);
     canvas.scale(viewport.scale);
-
-    Offset left = viewport.toWorld(Offset.zero);
-    Offset right = viewport.toWorld(Offset(size.width, size.height));
-    double spacing = viewport.scale < 0.5 ? 100.0 : 50.0;
-
-    left = Offset((left.dx/spacing).floorToDouble(), (left.dy/spacing).floorToDouble()) * spacing;
-    right = Offset((right.dx/spacing).floorToDouble(), (right.dy/spacing).floorToDouble()) * spacing;
-    Paint gridPaint = Paint()
-      ..color = AppColors.gridColor
-      ..strokeWidth = 0
-      ..strokeCap = StrokeCap.butt;
-
-    for(double x = left.dx; x <= right.dx; x += spacing){
-      canvas.drawLine(Offset(x, left.dy), Offset(x, right.dy), gridPaint);
-    }
-    for(double y = left.dy; y <= right.dy; y += spacing){
-      canvas.drawLine(Offset(left.dx, y), Offset(right.dx, y), gridPaint);
-    }*/
 
     final paint = Paint()
       ..color = AppColors.previewEdge
@@ -142,7 +157,7 @@ class GraphPainter extends CustomPainter{
       if (canvasOverlay.showsEdgeWeights) label.paint(canvas, Offset(midX - label.width / 2, midY - label.height / 2));
     });
 
-    canvasOverlay.paintAfterEdges(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf));
+    canvasOverlay.paintAfterEdges(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf, edges: edges));
 
     if(dragSourceId != "" && dragSourceId != "tooClose" && dragCurrentPosition != null) {
       final dragSource = nodes[dragSourceId];
@@ -153,10 +168,19 @@ class GraphPainter extends CustomPainter{
 
     nodes.forEach((id, node){
       final pos = _positionOf(node);
-      final nodeColor = Color(node.color);
+      final pathColor = canvasOverlay.pathNodeColor(id, edges);
+      final nodeColor = pathColor ?? Color(node.color);
       canvas.drawCircle(pos, node.radius, Paint()..color = nodeColor);
+      final ringColor = pathColor ?? (id == movingNodeId ? nodeColor : null);
+      if (ringColor != null) {
+        final ring = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _movingRingWidth;
+        canvas.drawCircle(pos, node.radius + _movingRingWidth / 2, ring..color = AppColors.canvasBackground);
+        canvas.drawCircle(pos, node.radius + _movingRingWidth * 1.5, ring..color = ringColor);
+      }
 
-      final labelColor = nodeColor.computeLuminance() > 0.5 ? AppColors.lightNodeLabel : AppColors.darkNodeLabel;
+      final labelColor = nodeColor.computeLuminance() > 0.179 ? AppColors.darkNodeLabel : AppColors.lightNodeLabel;
       final label = TextPainter(
         text: TextSpan(
             text: node.name,
@@ -172,9 +196,9 @@ class GraphPainter extends CustomPainter{
       label.paint(canvas, namePos);
     });
 
-    canvasOverlay.paintAfterNodes(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf));
+    canvasOverlay.paintAfterNodes(OverlayPaintContext(canvas: canvas, nodes: nodes, positionOf: _positionOf, edges: edges));
 
-    //canvas.restore();
+    canvas.restore();
   }
 
   @override

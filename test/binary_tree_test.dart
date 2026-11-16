@@ -108,36 +108,36 @@ void main() {
   });
 
   group('listas → árbol', () {
-    test('postorden + inorden reconstruye el ejemplo', () {
-      final result = BinaryTree.fromTraversals(post, ino, TreePair.postIn);
+    test('inorden + postorden reconstruye el ejemplo', () {
+      final result = BinaryTree.fromTraversals(ino, post, TreePair.inPost);
       expect(result.isOk, isTrue);
       expect(BinaryTree.labels(result.root, Traversal.pre), pre);
     });
 
-    test('postorden + preorden reconstruye el ejemplo', () {
-      final result = BinaryTree.fromTraversals(post, pre, TreePair.postPre);
+    test('inorden + preorden reconstruye el ejemplo', () {
+      final result = BinaryTree.fromTraversals(ino, pre, TreePair.inPre);
       expect(result.isOk, isTrue);
-      expect(BinaryTree.labels(result.root, Traversal.inorder), ino);
+      expect(BinaryTree.labels(result.root, Traversal.post), post);
     });
 
     test('acepta decimales y normaliza 5.0 como 5', () {
-      final result = BinaryTree.fromTraversals(['1.5', '8', '5.0'], ['1.5', '5', '8'], TreePair.postIn);
+      final result = BinaryTree.fromTraversals(['1.5', '5', '8'], ['1.5', '8', '5.0'], TreePair.inPost);
       expect(result.isOk, isTrue);
       expect(BinaryTree.labels(result.root, Traversal.pre), ['5', '1.5', '8']);
     });
 
     test('errores de validación', () {
-      expect(BinaryTree.fromTraversals([], ino, TreePair.postIn).error, contains('postorden'));
-      expect(BinaryTree.fromTraversals(post, [], TreePair.postIn).error, contains('inorden'));
-      expect(BinaryTree.fromTraversals(post, [], TreePair.postPre).error, contains('preorden'));
-      expect(BinaryTree.fromTraversals(['1', 'x'], ['x', '1'], TreePair.postIn).error, contains('no es un número'));
-      expect(BinaryTree.fromTraversals(post, ['1'], TreePair.postIn).error, contains('cantidad'));
-      expect(BinaryTree.fromTraversals(['1', '1'], ['1', '2'], TreePair.postIn).error, contains('repetido'));
-      expect(BinaryTree.fromTraversals(['1', '3'], ['1', '2'], TreePair.postIn).error, contains('no en el inorden'));
-      expect(BinaryTree.fromTraversals(['1', '2'], ['2', '1'], TreePair.postIn).error, contains('menor a mayor'));
-      expect(BinaryTree.fromTraversals(['3', '1', '2'], ['1', '2', '3'], TreePair.postIn).error,
-          contains('ningún árbol binario de búsqueda'));
-      expect(BinaryTree.fromTraversals(['1', '3', '2'], ['2', '3', '1'], TreePair.postPre).error,
+      expect(BinaryTree.fromTraversals([], post, TreePair.inPost).error, contains('inorden'));
+      expect(BinaryTree.fromTraversals(ino, [], TreePair.inPost).error, contains('postorden'));
+      expect(BinaryTree.fromTraversals(ino, [], TreePair.inPre).error, contains('preorden'));
+      expect(BinaryTree.fromTraversals(['1', 'x'], ['x', '1'], TreePair.inPost).error, contains('no es un número'));
+      expect(BinaryTree.fromTraversals(ino, ['1'], TreePair.inPost).error, contains('cantidad'));
+      expect(BinaryTree.fromTraversals(['1', '1'], ['1', '2'], TreePair.inPost).error, contains('repetido'));
+      expect(BinaryTree.fromTraversals(['1', '3'], ['1', '2'], TreePair.inPost).error, contains('no en el postorden'));
+      expect(BinaryTree.fromTraversals(['2', '1'], ['1', '2'], TreePair.inPost).error, contains('menor a mayor'));
+      expect(BinaryTree.fromTraversals(['1', '2', '3'], ['3', '1', '2'], TreePair.inPost).error,
+          contains('no corresponde al mismo árbol'));
+      expect(BinaryTree.fromTraversals(['1', '2', '3'], ['2', '3', '1'], TreePair.inPre).error,
           contains('no corresponde al mismo árbol'));
     });
 
@@ -145,10 +145,10 @@ void main() {
       final rng = Random(7);
       for (int i = 0; i < 200; i++) {
         final root = BinaryTree.random(1 + rng.nextInt(15), rng);
-        final p0 = BinaryTree.labels(root, Traversal.post);
+        final i0 = BinaryTree.labels(root, Traversal.inorder);
         for (final pair in TreePair.values) {
           final other = BinaryTree.labels(root, pair.other);
-          final rebuilt = BinaryTree.fromTraversals(p0, other, pair);
+          final rebuilt = BinaryTree.fromTraversals(i0, other, pair);
           expect(rebuilt.isOk, isTrue);
           expect(BinaryTree.labels(rebuilt.root, Traversal.pre), BinaryTree.labels(root, Traversal.pre));
         }

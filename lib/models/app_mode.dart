@@ -10,7 +10,6 @@ import 'package:graph_maker_app_2/screens/kruskal_screen.dart';
 import 'package:graph_maker_app_2/rules/dijkstra_rules.dart';
 import 'package:graph_maker_app_2/screens/dijkstra_screen.dart';
 
-import '../providers/graph_provider.dart';
 import '../screens/assignment_screen.dart';
 import '../screens/graph_screen.dart';
 import '../screens/insertion_sort.dart';
@@ -41,7 +40,7 @@ enum AppMode{
   final IconData icon;
   final String description;
 
-  bool get usesCopy => this == assignment || this == johnson || this == transporte || this == kruskal || this == dijkstra || this == tree;
+  bool get ownsGraph => this == assignment || this == johnson || this == transporte || this == kruskal || this == dijkstra || this == tree;
   GraphRules get rules => switch(this){
     AppMode.assignment => AssignmentRules(),
     AppMode.johnson => JohnsonRules(),
@@ -56,14 +55,14 @@ enum AppMode{
     AppMode.shell => DefaultRules(),
   };
 
-  Widget buildScreen(GraphProvider main) => switch (this) {
+  Widget buildScreen() => switch (this) {
     AppMode.graphMaker => const GraphScreen(),
-    AppMode.assignment => AssignmentScreen(mainProvider: main),
-    AppMode.johnson => JohnsonScreen(mainProvider: main),
-    AppMode.transporte => TransportationScreen(mainProvider: main),
-    AppMode.tree => TreeScreen(mainProvider: main),
-    AppMode.kruskal => KruskalScreen(mainProvider: main),
-    AppMode.dijkstra => DijkstraScreen(mainProvider: main),
+    AppMode.assignment => const AssignmentScreen(),
+    AppMode.johnson => const JohnsonScreen(),
+    AppMode.transporte => const TransportationScreen(),
+    AppMode.tree => const TreeScreen(),
+    AppMode.kruskal => const KruskalScreen(),
+    AppMode.dijkstra => const DijkstraScreen(),
     AppMode.selection => const SelectionSort(),
     AppMode.insertion => const InsertionSort(),
     AppMode.merge => const MergeSort(),

@@ -7,7 +7,7 @@ import 'package:graph_maker_app_2/widgets/ui/pill_button.dart';
 class TreeTourKeys {
   final GlobalKey traversals = GlobalKey();
   final GlobalKey pair = GlobalKey();
-  final GlobalKey postField = GlobalKey();
+  final GlobalKey inField = GlobalKey();
   final GlobalKey otherField = GlobalKey();
   final GlobalKey build = GlobalKey();
   final GlobalKey insertField = GlobalKey();
@@ -150,7 +150,7 @@ class TreeFunctions extends StatelessWidget {
 
   final TreePair pair;
   final ValueChanged<TreePair> onPairChanged;
-  final TextEditingController postController;
+  final TextEditingController inController;
   final TextEditingController otherController;
   final String? buildError;
   final VoidCallback? onBuild;
@@ -172,7 +172,7 @@ class TreeFunctions extends StatelessWidget {
     this.traversalsBlock,
     required this.pair,
     required this.onPairChanged,
-    required this.postController,
+    required this.inController,
     required this.otherController,
     required this.buildError,
     required this.onBuild,
@@ -242,7 +242,7 @@ class TreeFunctions extends StatelessWidget {
       showSelectedIcon: false,
       segments: [
         for (final TreePair p in TreePair.values)
-          ButtonSegment<TreePair>(value: p, label: Text('Post + ${p.other.short}'), tooltip: p.label),
+          ButtonSegment<TreePair>(value: p, label: Text('In + ${p.other.short}'), tooltip: p.label),
       ],
       selected: {pair},
       onSelectionChanged: (s) => onPairChanged(s.first),
@@ -269,11 +269,11 @@ class TreeFunctions extends StatelessWidget {
         _section('Construir desde recorridos'),
         _pairSelector(),
         const SizedBox(height: 12),
-        _field(context, 'Postorden', postController, keys?.postField, TextInputAction.next,
-            hint: 'Ej.: 2, 5, 4, 9, 8, 7'),
+        _field(context, 'Inorden', inController, keys?.inField, TextInputAction.next,
+            hint: 'Ej.: 2, 4, 5, 7, 8, 9'),
         const SizedBox(height: 12),
         _field(context, pair.other.label, otherController, keys?.otherField, TextInputAction.done,
-            hint: pair == TreePair.postIn ? 'Ej.: 2, 4, 5, 7, 8, 9' : 'Ej.: 7, 4, 2, 5, 8, 9',
+            hint: pair == TreePair.inPost ? 'Ej.: 2, 5, 4, 9, 8, 7' : 'Ej.: 7, 4, 2, 5, 8, 9',
             onSubmit: onBuild),
         const SizedBox(height: 12),
         PillButton(
