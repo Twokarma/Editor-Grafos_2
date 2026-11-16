@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../models/fuzzy/fuzzy_rule.dart';
 import '../../providers/fuzzy_provider.dart';
-import 'fuzzy_utils.dart';
 
 /// Pestaña "Reglas": lista de reglas y diálogo para crear nuevas.
 class RuleEditor extends StatelessWidget {
@@ -88,23 +87,7 @@ class _RuleDialogState extends State<_RuleDialog> {
   String? _consequent;
   String? _error;
 
-  late final Map<String, TextEditingController> _coef = {
-    for (final v in widget.provider.system.inputs) v.name: TextEditingController(),
-  };
-  final TextEditingController _const = TextEditingController();
-
-  @override
-  void dispose() {
-    for (final c in _coef.values) {
-      c.dispose();
-    }
-    _const.dispose();
-    super.dispose();
-  }
-
   void _submit() {
-    final sys = widget.provider.system;
-
     final ant = <String, String>{};
     _sel.forEach((k, v) {
       if (v != null) ant[k] = v;
@@ -114,32 +97,8 @@ class _RuleDialogState extends State<_RuleDialog> {
       return;
     }
 
-    final anySugeno = _const.text.trim().isNotEmpty ||
-        _coef.values.any((c) => c.text.trim().isNotEmpty);
-
-    Map<String, double>? coefs;
-    double constant = 0;
-    if (anySugeno) {
-      coefs = {};
-      for (final v in sys.inputs) {
-        final text = _coef[v.name]!.text;
-        final a = text.trim().isEmpty ? 0.0 : parseNum(text);
-        if (a == null) {
-          setState(() => _error = 'Coeficiente inválido para ${v.name}.');
-          return;
-        }
-        if (a != 0) coefs[v.name] = a;
-      }
-      final c = _const.text.trim().isEmpty ? 0.0 : parseNum(_const.text);
-      if (c == null) {
-        setState(() => _error = 'Constante inválida.');
-        return;
-      }
-      constant = c;
-    }
-
-    if (_consequent == null && !anySugeno) {
-      setState(() => _error = 'Define la salida Mamdani y/o la salida Sugeno.');
+    if (_consequent == null) {
+      setState(() => _error = 'Define la salida Mamdani.');
       return;
     }
 
@@ -147,8 +106,8 @@ class _RuleDialogState extends State<_RuleDialog> {
       antecedents: ant,
       connector: _connector,
       consequent: _consequent,
-      sugenoCoefs: coefs,
-      sugenoConst: constant,
+      sugenoCoefs: null,
+      sugenoConst: 0,
     ));
     Navigator.pop(context);
   }
@@ -206,39 +165,12 @@ class _RuleDialogState extends State<_RuleDialog> {
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('— (ninguno)'),
+                    child: Text('— (seleccionar)'),
                   ),
                   for (final t in sys.output.terms.keys)
                     DropdownMenuItem<String?>(value: t, child: Text(t)),
                 ],
                 onChanged: (val) => setState(() => _consequent = val),
-              ),
-              const Divider(height: 28),
-              Text('ENTONCES · Sugeno (opcional)', style: bold),
-              Text(
-                'z = Σ aᵢ·xᵢ + c   (deja los coeficientes vacíos para orden 0)',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
-              for (final v in sys.inputs)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: TextField(
-                    controller: _coef[v.name],
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    decoration: InputDecoration(labelText: 'Coeficiente de ${v.name}'),
-                  ),
-                ),
-              TextField(
-                controller: _const,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-                decoration: const InputDecoration(labelText: 'Constante c'),
               ),
               if (_error != null)
                 Padding(
